@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Tue, 13 Oct 2026 23:18:48 +0200
+Subject: [PATCH] Faster chunk loading: directional queues, prefetch,
+ PaperStream init
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+index 0743659c9f1122088adad4992b93649efc9ba873..7746e16b261579d2a167509bb0547951da239473 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+@@ -400,6 +400,14 @@ public final class RegionizedPlayerChunkLoader {
+             final int diff2X = c2x - centerX;
+             final int diff2Z = c2z - centerZ;
+ 
++            // PaperStream start - directional chunk loading
++            if (net.paperstream.PaperStreamConfig.directionalLoading) {
++                return Double.compare(
++                    PlayerChunkLoaderData.this.psPrefetch.priority(diff1X, diff1Z),
++                    PlayerChunkLoaderData.this.psPrefetch.priority(diff2X, diff2Z)
++                );
++            }
++            // PaperStream end - directional chunk loading
+             return Integer.compare(
+                 (diff1X * diff1X) + (diff1Z * diff1Z),
+                 (diff2X * diff2X) + (diff2Z * diff2Z)
+@@ -413,10 +421,12 @@ public final class RegionizedPlayerChunkLoader {
+         private final LongHeapPriorityQueue loadQueue = new LongHeapPriorityQueue(this.queueComparator);
+ 
+         private volatile boolean removed;
++        public final net.paperstream.chunk.PlayerChunkPrefetch psPrefetch; // PaperStream - directional loading and prefetch
+ 
+         public PlayerChunkLoaderData(final ServerLevel world, final ServerPlayer player) {
+             this.world = world;
+             this.player = player;
++            this.psPrefetch = new net.paperstream.chunk.PlayerChunkPrefetch(player); // PaperStream - directional loading and prefetch
+         }
+ 
+         private void flushDelayedTicketOps() {
+@@ -937,6 +947,7 @@ public final class RegionizedPlayerChunkLoader {
+             final int sendViewDistance = getSendViewDistance(loadViewDistance, clientViewDistance, playerDistances.sendViewDistance, worldDistances.sendViewDistance);
+ 
+             final ChunkPos playerPos = this.player.chunkPosition();
++            this.psPrefetch.tick(this.world, this.lastLoadDistance); // PaperStream - chunk prefetch
+             final boolean canGenerateChunks = this.canPlayerGenerateChunks();
+             final int currentChunkX = playerPos.x();
+             final int currentChunkZ = playerPos.z();
+@@ -956,6 +967,9 @@ public final class RegionizedPlayerChunkLoader {
+ 
+                     // can we still generate chunks?
+                     && this.canGenerateChunks == canGenerateChunks
++
++                    // PaperStream - did the player turn far enough to re-sort the queues?
++                    && !this.psPrefetch.shouldResort()
+             ) {
+                 // nothing we care about changed, so we're not re-calculating
+                 return;
+@@ -984,6 +998,7 @@ public final class RegionizedPlayerChunkLoader {
+             this.genQueue.clear();
+             this.loadingQueue.clear();
+             this.loadQueue.clear();
++            this.psPrefetch.markSorted(); // PaperStream - queues are rebuilt with the current direction
+ 
+             this.lastChunkX = currentChunkX;
+             this.lastChunkZ = currentChunkZ;
+diff --git a/net/minecraft/server/dedicated/DedicatedServer.java b/net/minecraft/server/dedicated/DedicatedServer.java
+index 0b6d7f99edde802cb464baa5a4b2b4a4dcce684a..681c4fda8a73aafeb7be4558f2ee0a87e755d526 100755
+--- a/net/minecraft/server/dedicated/DedicatedServer.java
++++ b/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -248,6 +248,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+         org.spigotmc.WatchdogThread.doStart(org.spigotmc.SpigotConfig.timeoutTime, org.spigotmc.SpigotConfig.restartOnCrash); // Paper - start watchdog thread
+         consoleThread.start(); // Paper - Enhance console tab completions for brigadier commands; start console thread after MinecraftServer.console & PaperConfig are initialized
+         io.papermc.paper.command.PaperCommands.registerCommands(this); // Paper - setup /paper command
++        net.paperstream.PaperStream.init(this); // PaperStream - config, chunk features and /paperstream
+         this.server.spark.registerCommandBeforePlugins(this.server); // Paper - spark
+         com.destroystokyo.paper.Metrics.PaperMetrics.startMetrics(); // Paper - start metrics
+         com.destroystokyo.paper.VersionHistoryManager.INSTANCE.getClass(); // Paper - load version history now
