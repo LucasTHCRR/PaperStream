@@ -170,6 +170,17 @@ public final class PlayerChunkPrefetch {
         return dist * (1.0D - PaperStreamConfig.directionalBias * cos);
     }
 
+    /**
+     * Factor for the concurrent chunk generation limit: fast players get more, unless the world lags.
+     */
+    public double generationBoost(final ServerLevel world) {
+        if (PaperStreamConfig.genBoost <= 1.0D || world.psLimits.isLagging()) {
+            return 1.0D;
+        }
+        final double speed = Math.sqrt(this.velX * this.velX + this.velZ * this.velZ);
+        return speed >= PaperStreamConfig.prefetchMinSpeed ? PaperStreamConfig.genBoost : 1.0D;
+    }
+
     public long getTotalPrefetched() {
         return this.totalPrefetched;
     }

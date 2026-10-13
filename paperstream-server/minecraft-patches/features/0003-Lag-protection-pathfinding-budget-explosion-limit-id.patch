@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Wed, 14 Oct 2026 00:02:26 +0200
+Subject: [PATCH] Lag protection, pathfinding budget, explosion limit, idle
+ mode, generation boost
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+index 7746e16b261579d2a167509bb0547951da239473..0278444e09ea52de97ee4bcec24c6782e4dcbaed 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+@@ -631,6 +631,7 @@ public final class RegionizedPlayerChunkLoader {
+             } else if (configLimit < 0L) {
+                 configLimit = Integer.MAX_VALUE;
+             } // else: use the value configured
++            configLimit = (long)(configLimit * this.psPrefetch.generationBoost(this.world)); // PaperStream - generation boost for fast players
+             configLimit = configLimit - this.generatingQueue.size();
+ 
+             return configLimit;
+diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
+index 292967a2e13917cd425c7e7897d9246328ec7c24..8c25d4eb7c02a60302dfdf20464b4696064927e1 100755
+--- a/net/minecraft/server/MinecraftServer.java
++++ b/net/minecraft/server/MinecraftServer.java
+@@ -1812,7 +1812,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+         this.updateEffectiveRespawnData();
+ 
+         this.isIteratingOverLevels = true; // Paper - Throw exception on world create while being ticked
++        net.paperstream.world.IdleMode.update(this); // PaperStream - idle mode
+         for (ServerLevel level : this.getAllLevels()) {
++            if (!net.paperstream.world.IdleMode.shouldTickWorlds()) continue; // PaperStream - idle mode
+             level.hasPhysicsEvent = org.bukkit.event.block.BlockPhysicsEvent.getHandlerList().getRegisteredListeners().length > 0; // Paper - BlockPhysicsEvent
+             level.hasEntityMoveEvent = io.papermc.paper.event.entity.EntityMoveEvent.getHandlerList().getRegisteredListeners().length > 0; // Paper - Add EntityMoveEvent
+             level.updateLagCompensationTick(); // Paper - lag compensation
+diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
+index 075e294333115738b25b64a390df323276cf39f9..722e4fefbde994fec1f133794945846e7ec1c9a8 100755
+--- a/net/minecraft/server/level/ServerChunkCache.java
++++ b/net/minecraft/server/level/ServerChunkCache.java
+@@ -614,7 +614,7 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
+             this.level.tickThunder(chunk);
+         }
+ 
+-        if (!spawningCategories.isEmpty()) {
++        if (!spawningCategories.isEmpty() && this.level.psLimits.shouldSpawnThisTick()) { // PaperStream - lag protection
+             if (this.level.getWorldBorder().isWithinBounds(chunkPos)) { // Paper - rewrite chunk system
+                 NaturalSpawner.spawnForChunk(this.level, chunk, spawnCookie, spawningCategories);
+             }
+diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
+index d3885233216c643c15a1d2e9129f6d4e04ce8015..8c387290f2b02e0bed3fe918134ea5b52a3341d0 100755
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -184,6 +184,7 @@ import org.slf4j.Logger;
+ 
+ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGetter, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemLevelReader, ca.spottedleaf.moonrise.patches.chunk_tick_iteration.ChunkTickServerLevel { // Paper - rewrite chunk system // Paper - chunk tick iteration
+     public final net.paperstream.world.WorldTickTimes psTickTimes = new net.paperstream.world.WorldTickTimes(); // PaperStream - per world MSPT
++    public final net.paperstream.world.WorldLimits psLimits = new net.paperstream.world.WorldLimits(this); // PaperStream - per world budgets
+     public static final BlockPos END_SPAWN_POINT = new BlockPos(100, 50, 0);
+     public static final IntProvider RAIN_DELAY = UniformInt.of(12000, 180000);
+     public static final IntProvider RAIN_DURATION = UniformInt.of(12000, 24000);
+@@ -1964,6 +1965,7 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+         final WeightedList<ExplosionParticleInfo> blockParticles,
+         final Holder<SoundEvent> explosionSound
+     ) {
++        if (!this.psLimits.tryExplode(x, z)) return; // PaperStream - explosion limit per chunk
+         // CraftBukkit start
+         this.explode0(source, damageSource, damageCalculator, x, y, z, r, fire, interactionType, smallExplosionParticles, largeExplosionParticles, blockParticles, explosionSound);
+     }
+diff --git a/net/minecraft/world/entity/ai/navigation/PathNavigation.java b/net/minecraft/world/entity/ai/navigation/PathNavigation.java
+index 862224dfc003bf02ee0d7c1d804549210d6c8ffa..27d95d26c54ad53dc8ebcaf0c28b8086d86c84c3 100755
+--- a/net/minecraft/world/entity/ai/navigation/PathNavigation.java
++++ b/net/minecraft/world/entity/ai/navigation/PathNavigation.java
+@@ -171,6 +171,12 @@ public abstract class PathNavigation {
+             return this.path;
+         }
+ 
++        // PaperStream start - pathfinding budget
++        if (this.level instanceof final net.minecraft.server.level.ServerLevel serverLevel && !serverLevel.psLimits.tryPath(target != null)) {
++            return null;
++        }
++        // PaperStream end - pathfinding budget
++
+         // Paper start - EntityPathfindEvent
+         boolean copiedSet = false;
+         for (BlockPos possibleTarget : targets) {

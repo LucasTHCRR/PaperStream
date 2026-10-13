@@ -39,6 +39,24 @@ public final class PaperStreamConfig {
     public static double entityThrottleFar = 56.0D;
     public static double entityThrottleLagMspt = 40.0D;
 
+    // chunks.generation-boost
+    public static double genBoost = 2.0D;
+
+    // world.lag-protection
+    public static boolean lagProtection = true;
+    public static double lagProtectionMspt = 45.0D;
+
+    // entities.pathfinding
+    public static boolean pathBudget = true;
+    public static int pathBudgetPerTick = 80;
+
+    // world.explosions
+    public static int explosionsPerChunk = 32;
+
+    // world.idle
+    public static boolean idleMode = true;
+    public static int idleAfterSeconds = 60;
+
     private PaperStreamConfig() {
     }
 
@@ -75,6 +93,27 @@ public final class PaperStreamConfig {
         pregenPauseAboveMspt = number(yaml, "chunks.pregen.pause-above-mspt", pregenPauseAboveMspt,
             "Pregeneration pauses while the average MSPT is above this value.");
 
+        genBoost = number(yaml, "chunks.generation-boost", genBoost,
+            "Fast moving players may generate this many times more chunks at once, as long as the world is not lagging. 1 = off.");
+
+        lagProtection = bool(yaml, "world.lag-protection.enabled", lagProtection,
+            "While a world is slow: half pathfinding budget and natural spawning only every 2nd tick, for that world only.");
+        lagProtectionMspt = number(yaml, "world.lag-protection.mspt", lagProtectionMspt,
+            "5 second average MSPT of a world from which on it counts as lagging.");
+
+        pathBudget = bool(yaml, "entities.pathfinding.budget-enabled", pathBudget,
+            "Limit new path calculations per world and tick. Mobs that hit the limit simply retry a moment later.");
+        pathBudgetPerTick = integer(yaml, "entities.pathfinding.max-per-tick", pathBudgetPerTick,
+            "New paths per world and tick. Mobs chasing an entity get twice this.");
+
+        explosionsPerChunk = integer(yaml, "world.explosions.max-per-chunk-per-tick", explosionsPerChunk,
+            "Explosions beyond this in one chunk and tick are dropped (TNT cannons, creeper farms). 0 = no limit.");
+
+        idleMode = bool(yaml, "world.idle.enabled", idleMode,
+            "With nobody online, worlds tick only once per second. Plugins keep running normally.");
+        idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
+            "Seconds without players before idle mode starts.");
+
         entityThrottle = bool(yaml, "entities.tick-throttle.enabled", entityThrottle,
             "Idle mobs far from every player tick less often. Fighting, riding, leashed, hurt or falling mobs are never throttled.");
         entityThrottleNear = number(yaml, "entities.tick-throttle.near-distance", entityThrottleNear,
@@ -88,6 +127,9 @@ public final class PaperStreamConfig {
         prefetchLookahead = Math.max(1, Math.min(32, prefetchLookahead));
         prefetchTicketTicks = Math.max(20, prefetchTicketTicks);
         pregenMaxConcurrent = Math.max(1, pregenMaxConcurrent);
+        genBoost = Math.max(1.0D, Math.min(8.0D, genBoost));
+        pathBudgetPerTick = Math.max(4, pathBudgetPerTick);
+        idleAfterSeconds = Math.max(5, idleAfterSeconds);
 
         try {
             yaml.save(FILE);

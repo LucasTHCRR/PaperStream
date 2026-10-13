@@ -63,6 +63,17 @@ public final class PaperStreamCommand extends Command {
                 sender.sendMessage("Chunks prefetched for you: " + loader.psPrefetch.getTotalPrefetched());
             }
         }
+        long pathsDenied = 0L;
+        long explosionsDenied = 0L;
+        for (final net.minecraft.server.level.ServerLevel level : net.minecraft.server.MinecraftServer.getServer().getAllLevels()) {
+            pathsDenied += level.psLimits.pathsDenied;
+            explosionsDenied += level.psLimits.explosionsDenied;
+            if (level.psLimits.isLagging()) {
+                sender.sendMessage("Lag protection active in " + level.getWorld().getName());
+            }
+        }
+        sender.sendMessage("Paths postponed: " + pathsDenied + ", explosions dropped: " + explosionsDenied
+            + (net.paperstream.world.IdleMode.isIdle() ? ", idle mode on" : ""));
         final Pregenerator gen = Pregenerator.current();
         if (gen != null) {
             sender.sendMessage("Pregen " + gen.status());
