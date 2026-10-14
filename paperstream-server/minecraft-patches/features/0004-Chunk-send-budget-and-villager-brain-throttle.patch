@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Wed, 14 Oct 2026 17:04:34 +0200
+Subject: [PATCH] Chunk send budget and villager brain throttle
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+index 0278444e09ea52de97ee4bcec24c6782e4dcbaed..04144daf262f1397471fd83a2cb7642c3b1e6833 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+@@ -850,6 +850,12 @@ public final class RegionizedPlayerChunkLoader {
+             final long maxSendsThisTick = this.chunkSendLimiter.takeAllocation(maxSends);
+             // we do not return sends that we took from the allocation back because we want to limit the max send rate, not target it
+             for (long i = 0; i < maxSendsThisTick; ++i) {
++                // PaperStream start - main thread time budget for chunk sending
++                if (i > 0 && net.paperstream.chunk.ChunkSendBudget.exhausted()) {
++                    this.chunkSendLimiter.returnUnused(maxSendsThisTick - i);
++                    break;
++                }
++                // PaperStream end - main thread time budget for chunk sending
+                 final long pendingSend = this.sendQueue.firstLong();
+                 final int pendingSendX = CoordinateUtils.getChunkX(pendingSend);
+                 final int pendingSendZ = CoordinateUtils.getChunkZ(pendingSend);
+@@ -869,7 +875,9 @@ public final class RegionizedPlayerChunkLoader {
+                 }
+                 this.sendQueue.dequeueLong();
+ 
++                final long psSendStart = System.nanoTime(); // PaperStream - chunk send budget
+                 this.sendChunk(pendingSendX, pendingSendZ);
++                net.paperstream.chunk.ChunkSendBudget.spent(System.nanoTime() - psSendStart); // PaperStream - chunk send budget
+ 
+                 if (this.removed) {
+                     // sendChunk may invoke plugin logic
+diff --git a/net/minecraft/world/entity/npc/villager/Villager.java b/net/minecraft/world/entity/npc/villager/Villager.java
+index 4f8439afa4ea602b662e68e6b86e9d927fb6a481..e7fc5c072901d0a2b9efb1b8619f1a73ca342bc3 100755
+--- a/net/minecraft/world/entity/npc/villager/Villager.java
++++ b/net/minecraft/world/entity/npc/villager/Villager.java
+@@ -95,6 +95,10 @@ import org.jspecify.annotations.Nullable;
+ import org.slf4j.Logger;
+ 
+ public class Villager extends AbstractVillager implements VillagerDataHolder, ReputationEventHandler {
++    // PaperStream start - villager brain throttle
++    public long psLastBlockPos = Long.MIN_VALUE;
++    public int psStillTicks;
++    // PaperStream end - villager brain throttle
+     private static final Logger LOGGER = LogUtils.getLogger();
+     private static final EntityDataAccessor<VillagerData> DATA_VILLAGER_DATA = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.VILLAGER_DATA);
+     private static final EntityDataAccessor<Boolean> DATA_VILLAGER_DATA_FINALIZED = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.BOOLEAN);
+@@ -263,7 +267,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
+         // Paper end - EAR 2
+         ProfilerFiller profiler = Profiler.get();
+         profiler.push("villagerBrain");
+-        if (!inactive) this.getBrain().tick(level, this); // Paper - EAR 2
++        if (!inactive && net.paperstream.entity.VillagerThrottle.shouldTickBrain(this)) this.getBrain().tick(level, this); // Paper - EAR 2 // PaperStream - villager brain throttle
+         profiler.pop();
+         if (this.assignProfessionWhenSpawned) {
+             this.assignProfessionWhenSpawned = false;

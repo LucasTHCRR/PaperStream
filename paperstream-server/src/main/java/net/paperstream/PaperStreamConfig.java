@@ -23,7 +23,7 @@ public final class PaperStreamConfig {
     public static int directionalInnerRadius = 2;
 
     // chunks.prefetch
-    public static boolean prefetch = true;
+    public static boolean prefetch = false;
     public static double prefetchMinSpeed = 0.5D;
     public static int prefetchLookahead = 6;
     public static int prefetchMaxPerSecond = 40;
@@ -33,11 +33,17 @@ public final class PaperStreamConfig {
     public static int pregenMaxConcurrent = 16;
     public static double pregenPauseAboveMspt = 45.0D;
 
+    // entities.villager-brain-interval
+    public static int villagerBrainInterval = 20;
+
     // entities.tick-throttle
     public static boolean entityThrottle = true;
     public static double entityThrottleNear = 32.0D;
     public static double entityThrottleFar = 56.0D;
     public static double entityThrottleLagMspt = 40.0D;
+
+    // chunks.send-budget-ms
+    public static double chunkSendBudgetMs = 0.0D;
 
     // chunks.generation-boost
     public static double genBoost = 2.0D;
@@ -93,6 +99,8 @@ public final class PaperStreamConfig {
         pregenPauseAboveMspt = number(yaml, "chunks.pregen.pause-above-mspt", pregenPauseAboveMspt,
             "Pregeneration pauses while the average MSPT is above this value.");
 
+        chunkSendBudgetMs = number(yaml, "chunks.send-budget-ms", chunkSendBudgetMs,
+            "Main thread milliseconds per tick for building chunk packets. Keeps MSPT flat while chunks load fast. 0 = no limit.");
         genBoost = number(yaml, "chunks.generation-boost", genBoost,
             "Fast moving players may generate this many times more chunks at once, as long as the world is not lagging. 1 = off.");
 
@@ -113,6 +121,9 @@ public final class PaperStreamConfig {
             "With nobody online, worlds tick only once per second. Plugins keep running normally.");
         idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
             "Seconds without players before idle mode starts.");
+
+        villagerBrainInterval = integer(yaml, "entities.villager-brain-interval", villagerBrainInterval,
+            "Villagers that have not moved for 10 seconds run their AI only every this many ticks. Trading villagers are never throttled. 1 = off.");
 
         entityThrottle = bool(yaml, "entities.tick-throttle.enabled", entityThrottle,
             "Idle mobs far from every player tick less often. Fighting, riding, leashed, hurt or falling mobs are never throttled.");
