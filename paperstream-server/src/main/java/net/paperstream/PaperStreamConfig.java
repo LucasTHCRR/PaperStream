@@ -33,6 +33,9 @@ public final class PaperStreamConfig {
     public static int pregenMaxConcurrent = 16;
     public static double pregenPauseAboveMspt = 45.0D;
 
+    // entities.activation-check-interval
+    public static int activationCheckInterval = 2;
+
     // entities.villager-brain-interval
     public static int villagerBrainInterval = 20;
 
@@ -122,6 +125,8 @@ public final class PaperStreamConfig {
         idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
             "Seconds without players before idle mode starts.");
 
+        activationCheckInterval = integer(yaml, "entities.activation-check-interval", activationCheckInterval,
+            "Check which entities are near a player (entity activation range) only every this many ticks. 1 = every tick like Paper.");
         villagerBrainInterval = integer(yaml, "entities.villager-brain-interval", villagerBrainInterval,
             "Villagers that have not moved for 10 seconds run their AI only every this many ticks. Trading villagers are never throttled. 1 = off.");
 
@@ -141,6 +146,7 @@ public final class PaperStreamConfig {
         genBoost = Math.max(1.0D, Math.min(8.0D, genBoost));
         pathBudgetPerTick = Math.max(4, pathBudgetPerTick);
         idleAfterSeconds = Math.max(5, idleAfterSeconds);
+        activationCheckInterval = Math.max(1, Math.min(10, activationCheckInterval));
 
         try {
             yaml.save(FILE);
