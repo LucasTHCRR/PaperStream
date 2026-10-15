@@ -34,7 +34,7 @@ public final class PaperStreamConfig {
     public static double pregenPauseAboveMspt = 45.0D;
 
     // entities.activation-check-interval
-    public static int activationCheckInterval = 2;
+    public static int activationCheckInterval = 1;
 
     // entities.villager-brain-interval
     public static int villagerBrainInterval = 20;
