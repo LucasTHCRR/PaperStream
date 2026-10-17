@@ -39,7 +39,7 @@ gradle.lifecycle.beforeProject {
     val paperVersionChannel = providers.gradleProperty("channel").get().trim()
     val paperBuildNumber = providers.environmentVariable("BUILD_NUMBER").orNull?.trim()?.toInt()
     val versionString = if (paperBuildNumber == null) {
-        "$mcVersion.local-SNAPSHOT"
+        "$mcVersion.build.0-alpha" // same shape as Paper builds, plugins parse this
     } else {
         "$mcVersion.build.$paperBuildNumber-${paperVersionChannel.lowercase()}"
     }

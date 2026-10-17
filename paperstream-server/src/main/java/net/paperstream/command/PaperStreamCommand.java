@@ -37,6 +37,10 @@ public final class PaperStreamCommand extends Command {
             case "mspt" -> this.mspt(sender);
             case "pregen" -> this.pregen(sender, args);
             case "reload" -> {
+                if (args.length >= 2 && args[1].equalsIgnoreCase("properties")) {
+                    PropertiesReload.reload(sender);
+                    return true;
+                }
                 PaperStreamConfig.load();
                 PaperStream.applyConfig();
                 sender.sendMessage("PaperStream config reloaded.");
@@ -144,6 +148,8 @@ public final class PaperStreamCommand extends Command {
                     out.add(s);
                 }
             }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {
+            out.add("properties");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             out.add("stop");
             out.add("status");

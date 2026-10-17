@@ -21,6 +21,7 @@ public final class PaperStream {
     public static void init(final MinecraftServer server) {
         PaperStreamConfig.load();
         applyConfig();
+        net.paperstream.command.PropertiesReloadHook.snapshot();
         server.server.getCommandMap().register("paperstream", "PaperStream", new PaperStreamCommand("paperstream"));
         server.addTickable(Pregenerator::tick);
     }

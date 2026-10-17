@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Thu, 15 Oct 2026 15:42:00 +0200
+Subject: [PATCH] Fewer worker threads on small machines
+
+
+diff --git a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
+index 6380125595fd55927dd69381bb987f4d1dd000fa..0d72440d019073ed2273625c9acb087db54abc96 100755
+--- a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
++++ b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
+@@ -42,7 +42,8 @@ public final class MoonriseCommon {
+     public static void adjustWorkerThreads(final int configWorkerThreads, final int configIoThreads) {
+         // PaperStream start - use more of the CPU for chunk generation and loading
+         // Paper uses a quarter of the cores. Leave two hardware threads for the main thread and netty, use the rest.
+-        int defaultWorkerThreads = Math.max(2, Math.min(16, Runtime.getRuntime().availableProcessors() - 2));
++        // On small machines the workers would starve the main thread, so never go below Paper there.
++        int defaultWorkerThreads = Math.max(1, Math.min(16, Runtime.getRuntime().availableProcessors() - 2));
+         // PaperStream end - use more of the CPU for chunk generation and loading
+         defaultWorkerThreads = Integer.getInteger(PlatformHooks.get().getBrand() + ".WorkerThreadCount", Integer.valueOf(defaultWorkerThreads));
+ 

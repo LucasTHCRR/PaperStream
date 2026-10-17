@@ -81,6 +81,12 @@ public final class EntityTickThrottle {
         if (!mob.onGround() || mob.isInWater() || mob.isInLava()) {
             return false;
         }
+        // villagers in danger must be able to flee every tick
+        if (mob instanceof net.minecraft.world.entity.npc.villager.Villager villager
+            && (villager.getBrain().hasMemoryValue(net.minecraft.world.entity.ai.memory.MemoryModuleType.NEAREST_HOSTILE)
+                || villager.level().isDarkOutside())) {
+            return false;
+        }
         final EntityType<?> type = mob.getType();
         return type != EntityTypes.ENDER_DRAGON && type != EntityTypes.WITHER && type != EntityTypes.WARDEN;
     }
