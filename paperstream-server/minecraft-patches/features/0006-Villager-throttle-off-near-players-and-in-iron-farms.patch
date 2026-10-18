@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Sun, 18 Oct 2026 06:36:27 +0200
+Subject: [PATCH] Villager throttle off near players and in iron farms
+
+
+diff --git a/net/minecraft/world/entity/npc/villager/Villager.java b/net/minecraft/world/entity/npc/villager/Villager.java
+index e7fc5c072901d0a2b9efb1b8619f1a73ca342bc3..91d12abc4a1e33c196a91134ecb0d86976b12ae7 100755
+--- a/net/minecraft/world/entity/npc/villager/Villager.java
++++ b/net/minecraft/world/entity/npc/villager/Villager.java
+@@ -98,6 +98,8 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
+     // PaperStream start - villager brain throttle
+     public long psLastBlockPos = Long.MIN_VALUE;
+     public int psStillTicks;
++    public int psNextPlayerCheck;
++    public boolean psNearPlayer;
+     // PaperStream end - villager brain throttle
+     private static final Logger LOGGER = LogUtils.getLogger();
+     private static final EntityDataAccessor<VillagerData> DATA_VILLAGER_DATA = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.VILLAGER_DATA);
