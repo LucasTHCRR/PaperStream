@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Mon, 19 Oct 2026 02:30:45 +0200
+Subject: [PATCH] Report each unsafe worldgen read feature only once
+
+
+diff --git a/net/minecraft/server/level/WorldGenRegion.java b/net/minecraft/server/level/WorldGenRegion.java
+index ebb0923b38a7529e7df531b3947a0421df29d654..2fdab7f9077802b3e324afe61eba9e419705f8fd 100755
+--- a/net/minecraft/server/level/WorldGenRegion.java
++++ b/net/minecraft/server/level/WorldGenRegion.java
+@@ -286,6 +286,8 @@ public class WorldGenRegion implements WorldGenLevel {
+         return null;
+     }
+ 
++    private static final java.util.Set<String> PS_WARNED_UNSAFE_READS = java.util.concurrent.ConcurrentHashMap.newKeySet(); // PaperStream
++
+     private void warnIfReadOutsideWriteZone(final int chunkX, final int chunkZ) {
+         if (this.centerChunkX != chunkX || this.centerChunkZ != chunkZ) {
+             if (!this.isWithinWriteZone(chunkX, chunkZ)) {
+@@ -305,7 +307,12 @@ public class WorldGenRegion implements WorldGenLevel {
+                     + "), step: "
+                     + this.generatingStep.targetStatus().getName()
+                     + (this.currentlyGenerating == null ? "" : ", currently generating: " + this.currentlyGenerating.get());
+-                Util.logAndPauseIfInIde(warning);
++                // PaperStream start - vanilla features like sculk_patch_deep_dark trigger this hundreds of times, report each feature once
++                final String psKey = this.generatingStep.targetStatus().getName() + "/" + (this.currentlyGenerating == null ? "" : this.currentlyGenerating.get());
++                if (PS_WARNED_UNSAFE_READS.add(psKey)) {
++                    Util.logAndPauseIfInIde(warning + " (further warnings for this feature are suppressed, this is a vanilla worldgen quirk)");
++                }
++                // PaperStream end
+             }
+         }
+     }
