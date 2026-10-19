@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Mon, 19 Oct 2026 21:19:37 +0200
+Subject: [PATCH] Anti lag machines: slow down redstone clocks, limit stacked
+ armor stands, minecarts and boats
+
+
+diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
+index 8c387290f2b02e0bed3fe918134ea5b52a3341d0..cc5d0256ded3f0bf85ba20d5cfe78af6f43fa9d6 100755
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -185,6 +185,7 @@ import org.slf4j.Logger;
+ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGetter, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemLevelReader, ca.spottedleaf.moonrise.patches.chunk_tick_iteration.ChunkTickServerLevel { // Paper - rewrite chunk system // Paper - chunk tick iteration
+     public final net.paperstream.world.WorldTickTimes psTickTimes = new net.paperstream.world.WorldTickTimes(); // PaperStream - per world MSPT
+     public final net.paperstream.world.WorldLimits psLimits = new net.paperstream.world.WorldLimits(this); // PaperStream - per world budgets
++    public final net.paperstream.world.RedstoneGuard psRedstone = new net.paperstream.world.RedstoneGuard(this); // PaperStream - redstone clock guard
+     public static final BlockPos END_SPAWN_POINT = new BlockPos(100, 50, 0);
+     public static final IntProvider RAIN_DELAY = UniformInt.of(12000, 180000);
+     public static final IntProvider RAIN_DURATION = UniformInt.of(12000, 24000);
+@@ -1366,6 +1367,11 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+     private void tickBlock(final BlockPos pos, final Block type) {
+         BlockState state = this.getBlockState(pos);
+         if (state.is(type)) {
++            // PaperStream start - redstone clock guard
++            if (!this.psRedstone.allowTick(pos, type)) {
++                this.scheduleTick(pos, type, this.psRedstone.postponeDelay());
++            } else
++            // PaperStream end - redstone clock guard
+             state.tick(this, pos, this.random);
+         }
+         // Paper start - rewrite chunk system
+@@ -1654,6 +1660,7 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+             }
+             // Paper end - capture all item additions to the world
+             // SPIGOT-6415: Don't call spawn event when reason is null. For example when an entity teleports to a new world.
++            if (!net.paperstream.entity.EntityStackGuard.allowSpawn(this, entity, spawnReason)) return false; // PaperStream - stacked entity guard
+             if (spawnReason != null && !org.bukkit.craftbukkit.event.CraftEventFactory.doEntityAddEventCalling(this, entity, spawnReason)) {
+                 return false;
+             }
+@@ -2073,6 +2080,7 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+ 
+     private boolean doBlockEvent(final BlockEventData eventData) {
+         BlockState state = this.getBlockState(eventData.pos());
++        if (eventData.block() instanceof net.minecraft.world.level.block.piston.PistonBaseBlock) this.psRedstone.countPiston(eventData.pos()); // PaperStream - redstone clock guard
+         return state.is(eventData.block()) && state.triggerEvent(this, eventData.pos(), eventData.paramA(), eventData.paramB());
+     }
+ 

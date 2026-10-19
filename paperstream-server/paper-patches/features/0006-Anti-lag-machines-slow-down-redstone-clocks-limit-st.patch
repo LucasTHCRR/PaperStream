@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Mon, 19 Oct 2026 21:19:37 +0200
+Subject: [PATCH] Anti lag machines: slow down redstone clocks, limit stacked
+ armor stands, minecarts and boats
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+index a5ea91906abebf44cfbfa120c535b8c391ab1acd..36e57199b5bf6533513a42af99646d5b360cc866 100755
+--- a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
++++ b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+@@ -566,6 +566,15 @@ public class CraftEventFactory {
+         org.bukkit.block.BlockFace blockFace = org.bukkit.craftbukkit.block.CraftBlock.notchToBlockFace(clickedFace);
+ 
+         EntityPlaceEvent event = new EntityPlaceEvent(entity.getBukkitEntity(), cplayer, clickedBlock, blockFace, CraftEquipmentSlot.getHand(hand));
++        // PaperStream start - stacked entity guard
++        if (!net.paperstream.entity.EntityStackGuard.allowPlace(level, entity)) {
++            event.setCancelled(true);
++            if (cplayer != null && !net.paperstream.PaperStreamConfig.entityStackMessage.isEmpty()) {
++                cplayer.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(net.paperstream.PaperStreamConfig.entityStackMessage));
++            }
++            return event;
++        }
++        // PaperStream end - stacked entity guard
+         entity.level().getCraftServer().getPluginManager().callEvent(event);
+ 
+         return event;

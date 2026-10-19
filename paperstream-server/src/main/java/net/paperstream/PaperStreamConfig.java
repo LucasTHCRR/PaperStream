@@ -68,6 +68,20 @@ public final class PaperStreamConfig {
     // world.explosions
     public static int explosionsPerChunk = 32;
 
+    // world.redstone-clocks
+    public static boolean redstoneGuard = true;
+    public static int redstoneMaxPerSecond = 400;
+    public static int redstoneTriggerSeconds = 10;
+    public static int redstoneThrottledPerSecond = 40;
+    public static int redstoneCooldownSeconds = 60;
+    public static boolean redstoneNotifyOps = true;
+
+    // entities.stack-guard
+    public static boolean entityStackGuard = true;
+    public static int entityStackPerBlock = 8;
+    public static int entityStackPerChunk = 96;
+    public static String entityStackMessage = "<red>Too many of these in one spot.";
+
     // world.idle
     public static boolean idleMode = true;
     public static int idleAfterSeconds = 60;
@@ -141,6 +155,28 @@ public final class PaperStreamConfig {
         explosionsPerChunk = integer(yaml, "world.explosions.max-per-chunk-per-tick", explosionsPerChunk,
             "Explosions beyond this in one chunk and tick are dropped (TNT cannons, creeper farms). 0 = no limit.");
 
+        redstoneGuard = bool(yaml, "world.redstone-clocks.enabled", redstoneGuard,
+            "Slow down redstone clocks that run far faster than any farm (lag machines). Nothing gets broken, the chunk only gets fewer redstone updates.");
+        redstoneMaxPerSecond = integer(yaml, "world.redstone-clocks.max-per-second", redstoneMaxPerSecond,
+            "Redstone component updates (repeaters, comparators, observers, torches, pistons, ...) per chunk and second that still count as normal.");
+        redstoneTriggerSeconds = integer(yaml, "world.redstone-clocks.trigger-seconds", redstoneTriggerSeconds,
+            "A chunk has to stay above the limit this many seconds in a row before it gets slowed down. Short bursts like a big piston door never trigger.");
+        redstoneThrottledPerSecond = integer(yaml, "world.redstone-clocks.throttled-per-second", redstoneThrottledPerSecond,
+            "Redstone updates per second a slowed down chunk still gets. The rest waits for the next second.");
+        redstoneCooldownSeconds = integer(yaml, "world.redstone-clocks.cooldown-seconds", redstoneCooldownSeconds,
+            "How long a chunk stays slowed down. It starts again while the clock keeps running.");
+        redstoneNotifyOps = bool(yaml, "world.redstone-clocks.notify", redstoneNotifyOps,
+            "Tell players with paperstream.notify.redstone (ops by default) where a clock was slowed down. The console always gets it.");
+
+        entityStackGuard = bool(yaml, "entities.stack-guard.enabled", entityStackGuard,
+            "Refuse placing armor stands, minecarts or boats once too many are in one spot (lag machines). Existing ones stay, plugins and commands are never limited.");
+        entityStackPerBlock = integer(yaml, "entities.stack-guard.max-per-block", entityStackPerBlock,
+            "Of one kind (armor stands, minecarts, boats) in a single block. 0 = no limit.");
+        entityStackPerChunk = integer(yaml, "entities.stack-guard.max-per-chunk", entityStackPerChunk,
+            "Of one kind in a whole chunk. 0 = no limit.");
+        entityStackMessage = string(yaml, "entities.stack-guard.message", entityStackMessage,
+            "Action bar text for a player whose placement was refused (MiniMessage). Empty = no message.");
+
         idleMode = bool(yaml, "world.idle.enabled", idleMode,
             "With nobody online, worlds tick only once per second. Plugins keep running normally.");
         idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
@@ -186,6 +222,10 @@ public final class PaperStreamConfig {
         activationCheckInterval = Math.max(1, Math.min(10, activationCheckInterval));
         fastTravelSimDistance = Math.max(2, Math.min(32, fastTravelSimDistance));
         fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);
+        redstoneMaxPerSecond = Math.max(20, redstoneMaxPerSecond);
+        redstoneTriggerSeconds = Math.max(1, redstoneTriggerSeconds);
+        redstoneThrottledPerSecond = Math.max(1, redstoneThrottledPerSecond);
+        redstoneCooldownSeconds = Math.max(1, redstoneCooldownSeconds);
 
         try {
             yaml.save(FILE);
