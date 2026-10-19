@@ -77,7 +77,9 @@ public final class PaperStreamCommand extends Command {
         Thread.ofVirtual().name("PaperStream pairing").start(() -> {
             try {
                 final String name = ProxyLink.pair(net.minecraft.server.MinecraftServer.getServer(), address, code);
-                sender.sendMessage("Paired as " + name + ". Velocity forwarding is on, players now join through the proxy.");
+                sender.sendMessage("Paired as " + name + "." + (net.paperstream.PaperStreamConfig.proxyConfigureForwarding
+                    ? " Velocity forwarding is on, players now join through the proxy."
+                    : " Forwarding was not changed (proxy.configure-forwarding is off), see the console."));
             } catch (final Exception ex) {
                 sender.sendMessage("Pairing failed: " + (ex.getMessage() != null ? ex.getMessage() : ex.toString()));
             }

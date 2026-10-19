@@ -72,10 +72,12 @@ public final class PaperStreamConfig {
     public static boolean idleMode = true;
     public static int idleAfterSeconds = 60;
 
-    public static boolean proxyLink = true;
+    public static boolean proxyLink = false;
+    public static boolean proxyConfigureForwarding = false;
+    public static boolean proxyAllowRestart = false;
+    public static boolean proxyAnnounceShutdown = true;
     public static int proxyLinkShutdownWait = 5;
-    public static java.util.List<String> proxyExecAllowed = java.util.List.of(
-        "list", "tps", "mspt", "paperstream", "say", "save-all", "whitelist", "kick");
+    public static java.util.List<String> proxyExecAllowed = java.util.List.of();
 
     private PaperStreamConfig() {
     }
@@ -145,11 +147,17 @@ public final class PaperStreamConfig {
             "Seconds without players before idle mode starts.");
 
         proxyLink = bool(yaml, "proxy.link", proxyLink,
-            "Pair this server with PaperProxy: /paperproxy link pair <name> on the proxy, then /paperstream pair <proxy-address> <code> here. Sets up Velocity forwarding by itself. Servers set up by hand are never touched.");
+            "Off by default. Lets this server pair with PaperProxy: /paperproxy link pair <name> on the proxy, then /paperstream pair <proxy-address> <code> here. Each part below is its own switch.");
+        proxyAnnounceShutdown = bool(yaml, "proxy.announce-shutdown", proxyAnnounceShutdown,
+            "On stop or restart, ask the proxy to move players to another server or its limbo first, so nobody gets kicked. Only with proxy.link on.");
+        proxyConfigureForwarding = bool(yaml, "proxy.configure-forwarding", proxyConfigureForwarding,
+            "Let pairing set up Velocity forwarding and online-mode by itself. Off: nothing is changed, the console shows what to set in paper-global.yml.");
+        proxyAllowRestart = bool(yaml, "proxy.allow-restart", proxyAllowRestart,
+            "Allow the proxy to restart this server (/paperproxy link restart, rolling restarts).");
         proxyLinkShutdownWait = integer(yaml, "proxy.shutdown-wait-seconds", proxyLinkShutdownWait,
             "On stop, wait at most this long for the proxy to move players to other servers.");
         init(yaml, "proxy.exec-allowed", proxyExecAllowed,
-            "Commands the proxy may run here with /paperproxy link exec. Only the first word counts, so \"paperstream\" allows all /paperstream subcommands. Put \"*\" to allow every command, [] to allow none.");
+            "Commands the proxy may run here with /paperproxy link exec. Empty = none (default). Only the first word counts, so \"paperstream\" allows all /paperstream subcommands, \"*\" allows every command.");
         proxyExecAllowed = yaml.getStringList("proxy.exec-allowed").stream()
             .map(s -> s.trim().toLowerCase(java.util.Locale.ROOT)).filter(s -> !s.isEmpty()).toList();
 

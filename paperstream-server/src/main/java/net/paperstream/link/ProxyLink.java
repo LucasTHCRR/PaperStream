@@ -77,8 +77,7 @@ public final class ProxyLink {
                 json.get("server").getAsString(), LinkProtocol.unb64(json.get("key").getAsString()),
                 json.get("secret").getAsString());
             applyForwarding(server, stored.secret());
-            LOGGER.info("PaperStream: linked to PaperProxy at {}:{} as {}, Velocity forwarding is on",
-                stored.host(), stored.port(), stored.server());
+            LOGGER.info("PaperStream: linked to PaperProxy at {}:{} as {}", stored.host(), stored.port(), stored.server());
         } catch (final IOException | RuntimeException ex) {
             LOGGER.error("PaperStream: could not read {}, the proxy link is off", FILE, ex);
         }
@@ -95,6 +94,14 @@ public final class ProxyLink {
     }
 
     private static void applyForwarding(final MinecraftServer server, final String secret) {
+        if (!PaperStreamConfig.proxyConfigureForwarding) {
+            if (!GlobalConfiguration.get().proxies.velocity.enabled) {
+                LOGGER.warn("PaperStream: proxy.configure-forwarding is off, so forwarding stays as it is. Players can only join "
+                    + "through the proxy once you set proxies.velocity.enabled: true and the proxy's forwarding secret in "
+                    + "config/paper-global.yml, and online-mode=false in server.properties (or turn proxy.configure-forwarding on).");
+            }
+            return;
+        }
         final var velocity = GlobalConfiguration.get().proxies.velocity;
         velocity.secret = secret;
         velocity.enabled = true;
@@ -309,8 +316,8 @@ public final class ProxyLink {
             stored = paired;
             lastProblem = "";
             applyForwarding(server, paired.secret());
-            LOGGER.info("PaperStream: paired with PaperProxy at {}:{} as {}. Velocity forwarding is on, "
-                + "players now join through the proxy.", host, port, paired.server());
+            LOGGER.info("PaperStream: paired with PaperProxy at {}:{} as {}.{}", host, port, paired.server(),
+                PaperStreamConfig.proxyConfigureForwarding ? " Velocity forwarding is on, players now join through the proxy." : "");
             startThread();
             return paired.server();
         }
@@ -355,10 +362,14 @@ public final class ProxyLink {
         } catch (final IOException ex) {
             LOGGER.error("PaperStream: could not delete {}", FILE, ex);
         }
-        GlobalConfiguration.get().proxies.velocity.enabled = false;
-        GlobalConfiguration.get().proxies.velocity.secret = "";
-        server.setUsesAuthentication(((net.minecraft.server.dedicated.DedicatedServer) server).getProperties().onlineMode);
-        LOGGER.info("PaperStream: proxy link removed, Velocity forwarding is off again");
+        if (PaperStreamConfig.proxyConfigureForwarding) {
+            GlobalConfiguration.get().proxies.velocity.enabled = false;
+            GlobalConfiguration.get().proxies.velocity.secret = "";
+            server.setUsesAuthentication(((net.minecraft.server.dedicated.DedicatedServer) server).getProperties().onlineMode);
+            LOGGER.info("PaperStream: proxy link removed, Velocity forwarding is off again");
+        } else {
+            LOGGER.info("PaperStream: proxy link removed, forwarding settings were not touched");
+        }
     }
 
     public static List<String> info() {
@@ -377,6 +388,9 @@ public final class ProxyLink {
                 lines.add("Last problem: " + lastProblem.replace("PaperStream: ", ""));
             }
             final java.util.List<String> allowed = PaperStreamConfig.proxyExecAllowed;
+            lines.add("Stop announcement: " + (PaperStreamConfig.proxyAnnounceShutdown ? "on" : "off")
+                + ", restart by the proxy: " + (PaperStreamConfig.proxyAllowRestart ? "allowed" : "not allowed")
+                + ", forwarding set up by PaperStream: " + (PaperStreamConfig.proxyConfigureForwarding ? "yes" : "no"));
             lines.add("Commands the proxy may run here: " + (allowed.contains("*") ? "all"
                 : allowed.isEmpty() ? "none" : String.join(", ", allowed)));
         }
@@ -505,6 +519,10 @@ public final class ProxyLink {
                 });
             }
             case "restart" -> {
+                if (!PaperStreamConfig.proxyAllowRestart) {
+                    LOGGER.warn("PaperStream: the proxy asked for a restart, proxy.allow-restart is off");
+                    return;
+                }
                 LOGGER.info("PaperStream: the proxy restarts this server");
                 server.execute(org.spigotmc.RestartCommand::restart);
             }
@@ -569,7 +587,7 @@ public final class ProxyLink {
      * to other servers first, or keeps them in its limbo until this server is back.
      */
     public static void beforeShutdown(final MinecraftServer server) {
-        if (stopAnnounced || connection == null || server.getPlayerCount() == 0) {
+        if (!PaperStreamConfig.proxyAnnounceShutdown || stopAnnounced || connection == null || server.getPlayerCount() == 0) {
             return;
         }
         stopAnnounced = true;
