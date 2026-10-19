@@ -49,6 +49,7 @@ public final class ProxyLink {
     private static volatile CountDownLatch moved;
     private static volatile boolean started;
     private static volatile boolean stopAnnounced;
+    private static final java.util.concurrent.atomic.AtomicBoolean PAIRING = new java.util.concurrent.atomic.AtomicBoolean();
     private static volatile String lastProblem = "";
 
     private record Stored(String host, int port, String server, byte[] key, String secret) {
@@ -125,11 +126,14 @@ public final class ProxyLink {
         long backoff = 2_000L;
         while (stored != null && !Thread.currentThread().isInterrupted()) {
             final Stored target = stored;
+            if (target == null) {
+                return;
+            }
             try {
                 connect(target);
                 backoff = 2_000L;
             } catch (final IOException | GeneralSecurityException | RuntimeException ex) {
-                if (stored != target) {
+                if (!sameLink(stored, target)) {
                     return; // reset or paired again on purpose
                 }
                 if (ex instanceof RefusedException refused && refused.permanent) {
@@ -152,6 +156,12 @@ public final class ProxyLink {
     }
 
     /** Logs a problem once until it changes, so a missing proxy does not flood the log. */
+    /** The same pairing, even if the forwarding secret was updated since. */
+    private static boolean sameLink(final Stored current, final Stored target) {
+        return current != null && current.server().equals(target.server())
+            && java.util.Arrays.equals(current.key(), target.key());
+    }
+
     private static void problem(final String message) {
         if (!message.equals(lastProblem)) {
             lastProblem = message;
@@ -201,6 +211,7 @@ public final class ProxyLink {
             case "no-pairing" -> "the proxy has no open pairing code, run /paperproxy link pair <name> on the proxy first";
             case "wrong-code" -> "wrong pairing code";
             case "unknown", "auth" -> "the proxy does not know this server any more. Run /paperstream proxy reset and pair again";
+            case "no-secret" -> "the forwarding secret of the proxy is empty, put one into its forwarding.secret file";
             case "version" -> "PaperStream and PaperProxy use different link versions, update both";
             default -> "the proxy refused the link (" + reason + ")";
         }, reason.equals("unknown") || reason.equals("auth"));
@@ -213,9 +224,31 @@ public final class ProxyLink {
      */
     public static String pair(final MinecraftServer server, final String address, final String code)
         throws IOException, GeneralSecurityException {
+        if (!PAIRING.compareAndSet(false, true)) {
+            throw new IOException("a pairing is already running");
+        }
+        try {
+            return pairNow(server, address, code);
+        } finally {
+            PAIRING.set(false);
+        }
+    }
+
+    private static String pairNow(final MinecraftServer server, final String address, final String code)
+        throws IOException, GeneralSecurityException {
         final int colon = address.lastIndexOf(':');
-        final String host = colon > 0 ? address.substring(0, colon) : address;
-        final int port = colon > 0 ? Integer.parseInt(address.substring(colon + 1)) : 25577;
+        final boolean hasPort = colon > 0 && address.indexOf(':') == colon
+            || colon > 0 && address.startsWith("[") && address.charAt(colon - 1) == ']';
+        String host = hasPort ? address.substring(0, colon) : address;
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        }
+        final int port;
+        try {
+            port = hasPort ? Integer.parseInt(address.substring(colon + 1)) : 25577;
+        } catch (final NumberFormatException ex) {
+            throw new IOException("invalid port in " + address);
+        }
         try (Socket socket = open(host, port)) {
             final InputStream in = socket.getInputStream();
             final OutputStream out = socket.getOutputStream();
@@ -255,12 +288,22 @@ public final class ProxyLink {
             final JsonObject result = JsonParser.parseString(new String(
                 session.open(LinkProtocol.readFrame(in)), StandardCharsets.UTF_8)).getAsJsonObject();
 
+            if (result.get("secret").getAsString().isBlank()) {
+                throw new IOException("the forwarding secret of the proxy is empty, put one into its forwarding.secret file");
+            }
             final Stored paired = new Stored(host, port, result.get("server").getAsString(),
                 LinkProtocol.unb64(result.get("key").getAsString()), result.get("secret").getAsString());
             save(paired);
             final JsonObject confirm = new JsonObject();
             confirm.addProperty("op", "paired");
             LinkProtocol.writeFrame(out, session.seal(confirm.toString().getBytes(StandardCharsets.UTF_8)));
+            // The proxy closes the connection once it saved the pairing; linking before that
+            // would find this server still unknown.
+            try {
+                LinkProtocol.readFrame(in);
+            } catch (final IOException expected) {
+                // closed, as it should be
+            }
             stored = paired;
             lastProblem = "";
             applyForwarding(server, paired.secret());
@@ -376,7 +419,7 @@ public final class ProxyLink {
             ready.addProperty("op", "ready");
             ready.addProperty("players", Bukkit.getOnlinePlayers().size());
             send(ready);
-            while (stored == target) {
+            while (sameLink(stored, target)) {
                 final byte[] frame;
                 try {
                     frame = LinkProtocol.readFrame(in);
@@ -435,6 +478,22 @@ public final class ProxyLink {
             case "restart" -> {
                 LOGGER.info("PaperStream: the proxy restarts this server");
                 server.execute(org.spigotmc.RestartCommand::restart);
+            }
+            case "secret" -> {
+                final Stored current = stored;
+                final String secret = message.get("value").getAsString();
+                if (current != null && !secret.isEmpty() && !secret.equals(current.secret())) {
+                    final Stored updated = new Stored(current.host(), current.port(), current.server(),
+                        current.key(), secret);
+                    try {
+                        save(updated);
+                        stored = updated;
+                        server.execute(() -> applyForwarding(server, secret));
+                        LOGGER.info("PaperStream: the proxy has a new forwarding secret, updated");
+                    } catch (final IOException ex) {
+                        LOGGER.error("PaperStream: could not save the new forwarding secret", ex);
+                    }
+                }
             }
             case "moved" -> {
                 final CountDownLatch latch = moved;
