@@ -42,6 +42,8 @@ public final class ProxyLink {
     private static final Path FILE = Path.of("paperstream-link.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final int READ_TIMEOUT_MILLIS = 10_000;
+    private static final long PROXY_SILENCE_MILLIS = 35_000L;
+    private static volatile boolean proxyAnswersPings;
 
     private static volatile Stored stored;
     private static volatile Thread thread;
@@ -374,6 +376,9 @@ public final class ProxyLink {
             if (connection == null && !lastProblem.isEmpty()) {
                 lines.add("Last problem: " + lastProblem.replace("PaperStream: ", ""));
             }
+            final java.util.List<String> allowed = PaperStreamConfig.proxyExecAllowed;
+            lines.add("Commands the proxy may run here: " + (allowed.contains("*") ? "all"
+                : allowed.isEmpty() ? "none" : String.join(", ", allowed)));
         }
         return lines;
     }
@@ -419,16 +424,24 @@ public final class ProxyLink {
             ready.addProperty("op", "ready");
             ready.addProperty("players", Bukkit.getOnlinePlayers().size());
             send(ready);
+            long lastHeard = System.currentTimeMillis();
+            proxyAnswersPings = false;
             while (sameLink(stored, target)) {
                 final byte[] frame;
                 try {
                     frame = LinkProtocol.readFrame(in);
                 } catch (final SocketTimeoutException timeout) {
+                    // a proxy that hangs keeps the socket open, so silence is the only sign
+                    // older PaperProxy versions never answer pings, only watch proxies that do
+                    if (proxyAnswersPings && System.currentTimeMillis() - lastHeard > PROXY_SILENCE_MILLIS) {
+                        throw new IOException("the proxy stopped answering");
+                    }
                     final JsonObject ping = new JsonObject();
                     ping.addProperty("op", "ping");
                     send(ping);
                     continue;
                 }
+                lastHeard = System.currentTimeMillis();
                 handle(JsonParser.parseString(new String(current.session().open(frame),
                     StandardCharsets.UTF_8)).getAsJsonObject());
             }
@@ -452,6 +465,22 @@ public final class ProxyLink {
             case "exec" -> {
                 final int id = message.get("id").getAsInt();
                 final String command = message.get("command").getAsString();
+                if (!execAllowed(command)) {
+                    LOGGER.warn("PaperStream: the proxy tried /{}, not allowed by proxy.exec-allowed", command);
+                    final JsonObject denied = new JsonObject();
+                    denied.addProperty("op", "result");
+                    denied.addProperty("id", id);
+                    denied.addProperty("denied", true);
+                    final JsonArray why = new JsonArray();
+                    why.add("This server does not allow /" + firstWord(command) + " from the proxy (proxy.exec-allowed in paperstream.yml).");
+                    denied.add("lines", why);
+                    try {
+                        send(denied);
+                    } catch (final IOException ex) {
+                        LOGGER.warn("PaperStream: could not answer the proxy");
+                    }
+                    return;
+                }
                 LOGGER.info("PaperStream: the proxy runs /{}", command);
                 server.execute(() -> {
                     final List<String> lines = new ArrayList<>();
@@ -495,6 +524,7 @@ public final class ProxyLink {
                     }
                 }
             }
+            case "pong" -> proxyAnswersPings = true;
             case "moved" -> {
                 final CountDownLatch latch = moved;
                 if (latch != null) {
@@ -509,6 +539,29 @@ public final class ProxyLink {
                 // pong and future messages
             }
         }
+    }
+
+    private static String firstWord(final String command) {
+        String word = command.trim();
+        if (word.startsWith("/")) {
+            word = word.substring(1);
+        }
+        final int space = word.indexOf(' ');
+        word = (space < 0 ? word : word.substring(0, space)).toLowerCase(java.util.Locale.ROOT);
+        // "minecraft:say" counts as "say"
+        final int colon = word.indexOf(':');
+        return colon < 0 ? word : word.substring(colon + 1);
+    }
+
+    /** Whether proxy.exec-allowed lets the proxy run this command. */
+    static boolean execAllowed(final String command) {
+        final java.util.List<String> allowed = PaperStreamConfig.proxyExecAllowed;
+        if (allowed.contains("*")) {
+            return true;
+        }
+        final String word = firstWord(command);
+        // execute could run any other command, so only "*" allows it
+        return !word.isEmpty() && !word.equals("execute") && allowed.contains(word);
     }
 
     /**

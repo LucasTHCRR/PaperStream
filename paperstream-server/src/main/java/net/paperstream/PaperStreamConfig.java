@@ -74,6 +74,8 @@ public final class PaperStreamConfig {
 
     public static boolean proxyLink = true;
     public static int proxyLinkShutdownWait = 5;
+    public static java.util.List<String> proxyExecAllowed = java.util.List.of(
+        "list", "tps", "mspt", "paperstream", "say", "save-all", "whitelist", "kick");
 
     private PaperStreamConfig() {
     }
@@ -146,6 +148,10 @@ public final class PaperStreamConfig {
             "Pair this server with PaperProxy: /paperproxy link pair <name> on the proxy, then /paperstream pair <proxy-address> <code> here. Sets up Velocity forwarding by itself. Servers set up by hand are never touched.");
         proxyLinkShutdownWait = integer(yaml, "proxy.shutdown-wait-seconds", proxyLinkShutdownWait,
             "On stop, wait at most this long for the proxy to move players to other servers.");
+        init(yaml, "proxy.exec-allowed", proxyExecAllowed,
+            "Commands the proxy may run here with /paperproxy link exec. Only the first word counts, so \"paperstream\" allows all /paperstream subcommands. Put \"*\" to allow every command, [] to allow none.");
+        proxyExecAllowed = yaml.getStringList("proxy.exec-allowed").stream()
+            .map(s -> s.trim().toLowerCase(java.util.Locale.ROOT)).filter(s -> !s.isEmpty()).toList();
 
         activationCheckInterval = integer(yaml, "entities.activation-check-interval", activationCheckInterval,
             "Check which entities are near a player (entity activation range) only every this many ticks. 1 = every tick like Paper.");
