@@ -43,12 +43,20 @@ public final class PaperStream {
     /**
      * Called from DedicatedServer#initServer after the Paper config is loaded and before any world loads.
      */
+    private static boolean bannerShown;
+
     public static void init(final MinecraftServer server) {
-        printBanner();
         PaperStreamConfig.load();
         applyConfig();
         net.paperstream.command.PropertiesReloadHook.snapshot();
         server.server.getCommandMap().register("paperstream", "PaperStream", new PaperStreamCommand("paperstream"));
+        // the first tick runs right after "Done (...)!", so the banner is the last thing of the startup log
+        server.addTickable(() -> {
+            if (!bannerShown) {
+                bannerShown = true;
+                printBanner();
+            }
+        });
         server.addTickable(Pregenerator::tick);
         net.paperstream.link.ProxyLink.init(server);
         server.addTickable(net.paperstream.link.ProxyLink::tick);
