@@ -2,6 +2,8 @@ package net.paperstream.chunk;
 
 import ca.spottedleaf.moonrise.common.util.CoordinateUtils;
 import ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel;
+import ca.spottedleaf.moonrise.patches.chunk_system.player.ChunkSystemServerPlayer;
+import ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader;
 import ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkHolderManager;
 import ca.spottedleaf.moonrise.patches.chunk_system.ticket.ChunkSystemTicketType;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -93,6 +95,7 @@ public final class PlayerChunkPrefetch {
             this.dirZ = Math.cos(yaw);
         }
         ++this.ticksSinceSort;
+        this.updateFastTravelSimulation(speed);
 
         if (++this.ticksSinceClear >= 600) {
             // tickets expire on their own, forget old entries so far-away chunks can be prefetched again
@@ -134,6 +137,42 @@ public final class PlayerChunkPrefetch {
                 }
             }
         }
+    }
+
+    private boolean simReduced;
+    private int simSavedDistance;
+    private int slowTicks;
+
+    /**
+     * Fast travel: while the player moves faster than the configured speed, chunks around them
+     * are still loaded and sent at full view distance, but only a small area around them ticks.
+     * The previous simulation distance comes back once the player has been slow for a while.
+     */
+    private void updateFastTravelSimulation(final double speed) {
+        final RegionizedPlayerChunkLoader.ViewDistanceHolder holder =
+            ((ChunkSystemServerPlayer)this.player).moonrise$getViewDistanceHolder();
+        if (!PaperStreamConfig.fastTravelSim) {
+            if (this.simReduced) {
+                holder.setTickViewDistance(this.simSavedDistance);
+                this.simReduced = false;
+            }
+            return;
+        }
+        if (speed >= PaperStreamConfig.fastTravelMinSpeed) {
+            this.slowTicks = 0;
+            if (!this.simReduced) {
+                this.simSavedDistance = holder.getViewDistances().tickViewDistance();
+                holder.setTickViewDistance(PaperStreamConfig.fastTravelSimDistance);
+                this.simReduced = true;
+            }
+        } else if (this.simReduced && ++this.slowTicks >= PaperStreamConfig.fastTravelRestoreTicks) {
+            holder.setTickViewDistance(this.simSavedDistance);
+            this.simReduced = false;
+        }
+    }
+
+    public boolean isSimulationReduced() {
+        return this.simReduced;
     }
 
     /**

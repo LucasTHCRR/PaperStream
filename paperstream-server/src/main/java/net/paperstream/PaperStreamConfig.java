@@ -45,6 +45,12 @@ public final class PaperStreamConfig {
     public static double entityThrottleFar = 56.0D;
     public static double entityThrottleLagMspt = 40.0D;
 
+    // chunks.fast-travel
+    public static boolean fastTravelSim = false;
+    public static double fastTravelMinSpeed = 1.2D;
+    public static int fastTravelSimDistance = 3;
+    public static int fastTravelRestoreTicks = 60;
+
     // chunks.send-budget-ms
     public static double chunkSendBudgetMs = 0.0D;
 
@@ -102,6 +108,14 @@ public final class PaperStreamConfig {
         pregenPauseAboveMspt = number(yaml, "chunks.pregen.pause-above-mspt", pregenPauseAboveMspt,
             "Pregeneration pauses while the average MSPT is above this value.");
 
+        fastTravelSim = bool(yaml, "chunks.fast-travel.enabled", fastTravelSim,
+            "Off by default because it changes how the world behaves: while a player flies fast, only a small area around them ticks (mobs, crops, redstone). View distance stays the same.");
+        fastTravelMinSpeed = number(yaml, "chunks.fast-travel.min-speed", fastTravelMinSpeed,
+            "Horizontal speed in blocks per tick from which a player counts as fast (1.2 = 24 blocks per second).");
+        fastTravelSimDistance = integer(yaml, "chunks.fast-travel.simulation-distance", fastTravelSimDistance,
+            "Simulation distance in chunks for fast players.");
+        fastTravelRestoreTicks = integer(yaml, "chunks.fast-travel.restore-after-ticks", fastTravelRestoreTicks,
+            "Ticks a player has to be slow again before the normal simulation distance comes back.");
         chunkSendBudgetMs = number(yaml, "chunks.send-budget-ms", chunkSendBudgetMs,
             "Main thread milliseconds per tick for building chunk packets. Keeps MSPT flat while chunks load fast. 0 = no limit.");
         genBoost = number(yaml, "chunks.generation-boost", genBoost,
@@ -147,6 +161,8 @@ public final class PaperStreamConfig {
         pathBudgetPerTick = Math.max(4, pathBudgetPerTick);
         idleAfterSeconds = Math.max(5, idleAfterSeconds);
         activationCheckInterval = Math.max(1, Math.min(10, activationCheckInterval));
+        fastTravelSimDistance = Math.max(2, Math.min(32, fastTravelSimDistance));
+        fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);
 
         try {
             yaml.save(FILE);

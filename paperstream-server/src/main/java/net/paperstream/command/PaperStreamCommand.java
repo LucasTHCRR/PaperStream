@@ -78,6 +78,16 @@ public final class PaperStreamCommand extends Command {
         }
         sender.sendMessage("Paths postponed: " + pathsDenied + ", explosions dropped: " + explosionsDenied
             + (net.paperstream.world.IdleMode.isIdle() ? ", idle mode on" : ""));
+        if (PaperStreamConfig.fastTravelSim) {
+            final List<String> fast = new ArrayList<>();
+            for (final ServerPlayer p : net.minecraft.server.MinecraftServer.getServer().getPlayerList().getPlayers()) {
+                final var l = ((ChunkSystemServerPlayer)p).moonrise$getChunkLoader();
+                if (l != null && l.psPrefetch.isSimulationReduced()) {
+                    fast.add(p.getScoreboardName());
+                }
+            }
+            sender.sendMessage("Fast travel (reduced simulation): " + (fast.isEmpty() ? "nobody" : String.join(", ", fast)));
+        }
         final Pregenerator gen = Pregenerator.current();
         if (gen != null) {
             sender.sendMessage("Pregen " + gen.status());
