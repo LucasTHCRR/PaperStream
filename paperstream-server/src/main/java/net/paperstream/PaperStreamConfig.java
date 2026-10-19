@@ -72,6 +72,9 @@ public final class PaperStreamConfig {
     public static boolean idleMode = true;
     public static int idleAfterSeconds = 60;
 
+    public static boolean proxyLink = true;
+    public static int proxyLinkShutdownWait = 5;
+
     private PaperStreamConfig() {
     }
 
@@ -139,6 +142,11 @@ public final class PaperStreamConfig {
         idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
             "Seconds without players before idle mode starts.");
 
+        proxyLink = bool(yaml, "proxy.link", proxyLink,
+            "Pair this server with PaperProxy: /paperproxy link pair <name> on the proxy, then /paperstream pair <proxy-address> <code> here. Sets up Velocity forwarding by itself. Servers set up by hand are never touched.");
+        proxyLinkShutdownWait = integer(yaml, "proxy.shutdown-wait-seconds", proxyLinkShutdownWait,
+            "On stop, wait at most this long for the proxy to move players to other servers.");
+
         activationCheckInterval = integer(yaml, "entities.activation-check-interval", activationCheckInterval,
             "Check which entities are near a player (entity activation range) only every this many ticks. 1 = every tick like Paper.");
         villagerBrainInterval = integer(yaml, "entities.villager-brain-interval", villagerBrainInterval,
@@ -160,6 +168,7 @@ public final class PaperStreamConfig {
         genBoost = Math.max(1.0D, Math.min(8.0D, genBoost));
         pathBudgetPerTick = Math.max(4, pathBudgetPerTick);
         idleAfterSeconds = Math.max(5, idleAfterSeconds);
+        proxyLinkShutdownWait = Math.max(0, Math.min(30, proxyLinkShutdownWait));
         activationCheckInterval = Math.max(1, Math.min(10, activationCheckInterval));
         fastTravelSimDistance = Math.max(2, Math.min(32, fastTravelSimDistance));
         fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);

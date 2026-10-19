@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.paperstream.PaperStream;
 import net.paperstream.PaperStreamConfig;
 import net.paperstream.chunk.Pregenerator;
+import net.paperstream.link.ProxyLink;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -17,12 +18,12 @@ import org.bukkit.entity.Player;
 
 public final class PaperStreamCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload");
+    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload", "pair", "proxy");
 
     public PaperStreamCommand(final String name) {
         super(name);
         this.description = "PaperStream status and tools";
-        this.usageMessage = "/paperstream <info|mspt|pregen|reload>";
+        this.usageMessage = "/paperstream <info|mspt|pregen|reload|pair|proxy>";
         this.setPermission("paperstream.command");
     }
 
@@ -36,6 +37,8 @@ public final class PaperStreamCommand extends Command {
             case "info" -> this.info(sender);
             case "mspt" -> this.mspt(sender);
             case "pregen" -> this.pregen(sender, args);
+            case "pair" -> this.pair(sender, args);
+            case "proxy" -> this.proxy(sender, args);
             case "reload" -> {
                 if (args.length >= 2 && args[1].equalsIgnoreCase("properties")) {
                     PropertiesReload.reload(sender);
@@ -48,6 +51,50 @@ public final class PaperStreamCommand extends Command {
             default -> sender.sendMessage("Usage: " + this.usageMessage);
         }
         return true;
+    }
+
+    private void pair(final CommandSender sender, final String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage("Usage: /paperstream pair <proxy-address[:port]> <code>");
+            sender.sendMessage("Get the code on the proxy with /paperproxy link pair <server-name> [group].");
+            return;
+        }
+        if (!PaperStreamConfig.proxyLink) {
+            sender.sendMessage("The proxy link is off (proxy.link in paperstream.yml).");
+            return;
+        }
+        if (ProxyLink.configuredByHand()) {
+            sender.sendMessage("Velocity or BungeeCord forwarding is already set up by hand, PaperStream does not touch it.");
+            return;
+        }
+        if (ProxyLink.isPaired()) {
+            sender.sendMessage("This server is already paired. Run /paperstream proxy reset first to pair it again.");
+            return;
+        }
+        final String address = args[1];
+        final String code = args[2];
+        sender.sendMessage("Pairing with " + address + "...");
+        Thread.ofVirtual().name("PaperStream pairing").start(() -> {
+            try {
+                final String name = ProxyLink.pair(net.minecraft.server.MinecraftServer.getServer(), address, code);
+                sender.sendMessage("Paired as " + name + ". Velocity forwarding is on, players now join through the proxy.");
+            } catch (final Exception ex) {
+                sender.sendMessage("Pairing failed: " + (ex.getMessage() != null ? ex.getMessage() : ex.toString()));
+            }
+        });
+    }
+
+    private void proxy(final CommandSender sender, final String[] args) {
+        if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
+            if (!ProxyLink.isPaired()) {
+                sender.sendMessage("This server is not paired.");
+                return;
+            }
+            ProxyLink.reset(net.minecraft.server.MinecraftServer.getServer());
+            sender.sendMessage("Pairing removed, Velocity forwarding is off again. Also run /paperproxy link remove <name> on the proxy.");
+            return;
+        }
+        ProxyLink.info().forEach(sender::sendMessage);
     }
 
     private void info(final CommandSender sender) {
@@ -160,6 +207,9 @@ public final class PaperStreamCommand extends Command {
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {
             out.add("properties");
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("proxy")) {
+            out.add("info");
+            out.add("reset");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             out.add("stop");
             out.add("status");

@@ -50,6 +50,8 @@ public final class PaperStream {
         net.paperstream.command.PropertiesReloadHook.snapshot();
         server.server.getCommandMap().register("paperstream", "PaperStream", new PaperStreamCommand("paperstream"));
         server.addTickable(Pregenerator::tick);
+        net.paperstream.link.ProxyLink.init(server);
+        server.addTickable(net.paperstream.link.ProxyLink::tick);
     }
 
     public static void applyConfig() {
