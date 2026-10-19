@@ -12,13 +12,39 @@ public final class PaperStream {
 
     private static final Logger LOGGER = LogUtils.getClassLogger();
 
+    private static final String[] LOGO = {
+        " ____                         ____   _",
+        "|  _ \\ __ _ _ __   ___ _ __  / ___| | |_  _ __   ___   __ _  _ __ ___",
+        "| |_) / _` | '_ \\ / _ \\ '__| \\___ \\ | __|| '__| / _ \\ / _` || '_ ` _ \\",
+        "|  __/ (_| | |_) |  __/ |     ___) || |_ | |   |  __/| (_| || | | | | |",
+        "|_|   \\__,_| .__/ \\___|_|    |____/  \\__||_|    \\___| \\__,_||_| |_| |_|",
+        "           |_|",
+        "                                                      made by LucasTHCR"
+    };
+
     private PaperStream() {
+    }
+
+    /**
+     * Start banner, always shown: PaperStream must never be mistaken for an official PaperMC build.
+     */
+    private static void printBanner() {
+        LOGGER.info("------------------------------------------------------------------------");
+        for (final String line : LOGO) {
+            LOGGER.info(line);
+        }
+        LOGGER.info("");
+        LOGGER.info("PaperStream {} - NOT OFFICIAL PAPER / not affiliated with PaperMC",
+            io.papermc.paper.ServerBuildInfo.buildInfo().asString(io.papermc.paper.ServerBuildInfo.StringRepresentation.VERSION_SIMPLE));
+        LOGGER.info("Please report problems to PaperStream, not to PaperMC: https://dc.gg/paperstream");
+        LOGGER.info("------------------------------------------------------------------------");
     }
 
     /**
      * Called from DedicatedServer#initServer after the Paper config is loaded and before any world loads.
      */
     public static void init(final MinecraftServer server) {
+        printBanner();
         PaperStreamConfig.load();
         applyConfig();
         net.paperstream.command.PropertiesReloadHook.snapshot();

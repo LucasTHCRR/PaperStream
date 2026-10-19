@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@users.noreply.codeberg.org>
+Date: Mon, 19 Oct 2026 06:06:44 +0200
+Subject: [PATCH] Revert "Cone loading for fast players"
+
+This reverts commit c39946163122b97ea43d6b77aae3532f9779c818.
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+index 25d023817be7fe468b890c62b24ef56793bf8ff8..04144daf262f1397471fd83a2cb7642c3b1e6833 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
+@@ -979,7 +979,6 @@ public final class RegionizedPlayerChunkLoader {
+ 
+                     // PaperStream - did the player turn far enough to re-sort the queues?
+                     && !this.psPrefetch.shouldResort()
+-                    && !this.psPrefetch.coneStateChanged() // PaperStream - cone loading switched on or off
+             ) {
+                 // nothing we care about changed, so we're not re-calculating
+                 return;
+@@ -1056,8 +1055,7 @@ public final class RegionizedPlayerChunkLoader {
+                         break;
+                     }
+                     case CHUNK_TICKET_STAGE_LOADED: {
+-                        if ((canGenerateChunks || this.isLoadedChunkGeneratable(chunkX, chunkZ))
+-                            && this.psPrefetch.allowGeneration(dx, dz, ((ChunkSystemLevel)this.world).moonrise$getAnyChunkIfLoaded(chunkX, chunkZ))) { // PaperStream - cone loading
++                        if (canGenerateChunks || this.isLoadedChunkGeneratable(chunkX, chunkZ)) {
+                             this.genQueue.enqueue(chunk);
+                         }
+                         break;
