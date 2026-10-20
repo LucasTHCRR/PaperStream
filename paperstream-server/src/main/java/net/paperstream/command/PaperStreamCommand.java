@@ -18,12 +18,12 @@ import org.bukkit.entity.Player;
 
 public final class PaperStreamCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload", "pair", "proxy");
+    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload", "profile", "pair", "proxy");
 
     public PaperStreamCommand(final String name) {
         super(name);
         this.description = "PaperStream status and tools";
-        this.usageMessage = "/paperstream <info|mspt|pregen|reload|pair|proxy>";
+        this.usageMessage = "/paperstream <info|mspt|pregen|reload|profile|pair|proxy>";
         this.setPermission("paperstream.command");
     }
 
@@ -39,6 +39,7 @@ public final class PaperStreamCommand extends Command {
             case "pregen" -> this.pregen(sender, args);
             case "pair" -> this.pair(sender, args);
             case "proxy" -> this.proxy(sender, args);
+            case "profile" -> this.profile(sender, args);
             case "reload" -> {
                 if (args.length >= 2 && args[1].equalsIgnoreCase("properties")) {
                     PropertiesReload.reload(sender);
@@ -51,6 +52,32 @@ public final class PaperStreamCommand extends Command {
             default -> sender.sendMessage("Usage: " + this.usageMessage);
         }
         return true;
+    }
+
+    private void profile(final CommandSender sender, final String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("Profile: " + PaperStreamConfig.profile.id + " - " + PaperStreamConfig.profile.description);
+            for (final net.paperstream.ConfigProfile p : net.paperstream.ConfigProfile.values()) {
+                sender.sendMessage("  " + p.id + ": " + p.description);
+            }
+            sender.sendMessage("Switch with /paperstream profile <name>");
+            return;
+        }
+        final net.paperstream.ConfigProfile target = net.paperstream.ConfigProfile.byId(args[1]);
+        if (target == null) {
+            sender.sendMessage("Unknown profile. Choose low, medium, performance or custom.");
+            return;
+        }
+        final int workersBefore = PaperStreamConfig.autoWorkerThreads(Runtime.getRuntime().availableProcessors());
+        PaperStreamConfig.switchProfile(target);
+        PaperStream.applyConfig();
+        sender.sendMessage("Profile " + target.id + " is active" + (target == net.paperstream.ConfigProfile.CUSTOM
+            ? ", the values in paperstream.yml stay as they are." : ", its values were written to paperstream.yml."));
+        final int workersAfter = PaperStreamConfig.autoWorkerThreads(Runtime.getRuntime().availableProcessors());
+        if (workersAfter != workersBefore) {
+            sender.sendMessage("Chunk worker threads change from " + workersBefore + " to " + workersAfter
+                + " after a restart (only if worker-threads is -1 in paper-global.yml).");
+        }
     }
 
     private void pair(final CommandSender sender, final String[] args) {
@@ -106,7 +133,7 @@ public final class PaperStreamCommand extends Command {
         final long maxMb = rt.maxMemory() >> 20;
         sender.sendMessage(String.format(Locale.ROOT, "TPS %.2f / %.2f / %.2f, MSPT %.2f, RAM %d/%d MB",
             tps[0], tps[1], tps[2], Bukkit.getAverageTickTime(), usedMb, maxMb));
-        sender.sendMessage("Region compression: " + PaperStreamConfig.regionCompression
+        sender.sendMessage("Profile: " + PaperStreamConfig.profile.id + ", region compression: " + PaperStreamConfig.regionCompression
             + ", directional loading: " + onOff(PaperStreamConfig.directionalLoading)
             + ", prefetch: " + onOff(PaperStreamConfig.prefetch));
         if (sender instanceof final Player player) {
@@ -212,6 +239,12 @@ public final class PaperStreamCommand extends Command {
             for (final String s : SUBCOMMANDS) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) {
                     out.add(s);
+                }
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("profile")) {
+            for (final net.paperstream.ConfigProfile p : net.paperstream.ConfigProfile.values()) {
+                if (p.id.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(p.id);
                 }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {

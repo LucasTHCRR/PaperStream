@@ -14,6 +14,8 @@ public final class PaperStreamConfig {
     private static final Logger LOGGER = LogUtils.getClassLogger();
     private static final File FILE = new File("paperstream.yml");
 
+    public static ConfigProfile profile = ConfigProfile.MEDIUM;
+
     // chunks.region-compression
     public static String regionCompression = "lz4";
 
@@ -97,11 +99,42 @@ public final class PaperStreamConfig {
     }
 
     public static void load() {
-        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(FILE);
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(FILE);
+        if (!yaml.contains("profile")) {
+            // New file or one from before profiles: keep every value as it is and call it medium.
+            final YamlConfiguration sorted = new YamlConfiguration();
+            sorted.set("profile", ConfigProfile.MEDIUM.id);
+            sorted.set("profile-applied", ConfigProfile.MEDIUM.id);
+            for (final String key : yaml.getKeys(false)) {
+                sorted.set(key, yaml.get(key));
+            }
+            yaml = sorted;
+        }
         yaml.options().setHeader(java.util.List.of(
             "PaperStream configuration",
             "Every feature can be switched off on its own."
         ));
+
+        final String profileName = yaml.getString("profile", ConfigProfile.MEDIUM.id);
+        ConfigProfile chosen = ConfigProfile.byId(profileName);
+        if (chosen == null) {
+            LOGGER.warn("Unknown profile '{}' in paperstream.yml, using the values from the file (custom)", profileName);
+            chosen = ConfigProfile.CUSTOM;
+        }
+        if (chosen != ConfigProfile.CUSTOM && !chosen.id.equals(yaml.getString("profile-applied"))) {
+            for (final java.util.Map.Entry<String, Object> entry : chosen.settings().entrySet()) {
+                yaml.set(entry.getKey(), entry.getValue());
+            }
+            LOGGER.info("PaperStream profile '{}' applied: {}", chosen.id, chosen.description);
+        }
+        profile = chosen;
+        yaml.set("profile-applied", chosen.id);
+        yaml.setComments("profile", java.util.List.of(
+            "low = light touch, close to Paper. medium = balanced (default). performance = for weak servers, saves the most CPU.",
+            "custom = nothing is changed. Switching writes the profile's values below once, afterwards every value can still be changed by hand.",
+            "Switch live with /paperstream profile <name>. The chunk worker threads (when worker-threads is -1 in paper-global.yml) follow after a restart."
+        ));
+        yaml.setComments("profile-applied", java.util.List.of("Written by PaperStream, do not change."));
 
         regionCompression = string(yaml, "chunks.region-compression", regionCompression,
             "Compression for newly written chunks: lz4, deflate, none or keep (use server.properties). Old chunks stay readable.");
@@ -232,6 +265,24 @@ public final class PaperStreamConfig {
         } catch (final IOException ex) {
             LOGGER.error("Could not save paperstream.yml", ex);
         }
+    }
+
+    /** Chunk worker threads for chunk-system.worker-threads: -1, read before the rest of the config is loaded. */
+    public static int autoWorkerThreads(final int cores) {
+        final ConfigProfile fromFile = ConfigProfile.byId(YamlConfiguration.loadConfiguration(FILE).getString("profile", ConfigProfile.MEDIUM.id));
+        return (fromFile == null ? ConfigProfile.MEDIUM : fromFile).workerThreads(cores);
+    }
+
+    /** Switches the profile in paperstream.yml and loads it. */
+    public static void switchProfile(final ConfigProfile target) {
+        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(FILE);
+        yaml.set("profile", target.id);
+        try {
+            yaml.save(FILE);
+        } catch (final IOException ex) {
+            LOGGER.error("Could not save paperstream.yml", ex);
+        }
+        load();
     }
 
     private static String string(final YamlConfiguration yaml, final String path, final String def, final String comment) {
