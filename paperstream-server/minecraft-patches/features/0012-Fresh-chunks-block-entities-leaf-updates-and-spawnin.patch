@@ -1,0 +1,98 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Wed, 21 Oct 2026 01:31:09 +0200
+Subject: [PATCH] Fresh chunks: block entities, leaf updates and spawning wait
+ a moment in just loaded chunks without players, mobs from disk follow the
+ activation range at once
+
+
+diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
+index 2003f1aca9177ff0a0ea8ce76ee45509f35bf326..f41437f61c6bbe278620f3b8af1fd0d04874254b 100644
+--- a/io/papermc/paper/entity/activation/ActivationRange.java
++++ b/io/papermc/paper/entity/activation/ActivationRange.java
+@@ -302,7 +302,7 @@ public final class ActivationRange {
+         }
+         // special case always immunities
+         // immunize brand-new entities, dead entities, and portal scenarios
+-        if (entity.defaultActivationState || entity.tickCount < 20 * 10 || !entity.isAlive() || (entity.portalProcess != null && !entity.portalProcess.hasExpired()) || entity.getPortalCooldown() > 0) {
++        if (entity.defaultActivationState || (entity.tickCount < 20 * 10 && !(entity.psFromDisk && net.paperstream.PaperStreamConfig.freshChunks)) || !entity.isAlive() || (entity.portalProcess != null && !entity.portalProcess.hasExpired()) || entity.getPortalCooldown() > 0) {
+             return true;
+         }
+         // immunize leashed entities
+diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
+index 722e4fefbde994fec1f133794945846e7ec1c9a8..6b4c9b417202f21d3532642cad34aeabc2cc23ec 100755
+--- a/net/minecraft/server/level/ServerChunkCache.java
++++ b/net/minecraft/server/level/ServerChunkCache.java
+@@ -614,7 +614,7 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
+             this.level.tickThunder(chunk);
+         }
+ 
+-        if (!spawningCategories.isEmpty() && this.level.psLimits.shouldSpawnThisTick()) { // PaperStream - lag protection
++        if (!spawningCategories.isEmpty() && this.level.psLimits.shouldSpawnThisTick() && !net.paperstream.chunk.FreshChunks.isWarming(chunk)) { // PaperStream - lag protection, fresh chunk warm up
+             if (this.level.getWorldBorder().isWithinBounds(chunkPos)) { // Paper - rewrite chunk system
+                 NaturalSpawner.spawnForChunk(this.level, chunk, spawnCookie, spawningCategories);
+             }
+diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
+index cc5d0256ded3f0bf85ba20d5cfe78af6f43fa9d6..b85ba7a6dea17ba6ccd48b4f2eb73007dc0fcec4 100755
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -1370,6 +1370,9 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+             // PaperStream start - redstone clock guard
+             if (!this.psRedstone.allowTick(pos, type)) {
+                 this.scheduleTick(pos, type, this.psRedstone.postponeDelay());
++            } else if (type instanceof net.minecraft.world.level.block.LeavesBlock && net.paperstream.PaperStreamConfig.freshChunks
++                && this.getChunkIfLoaded(pos.getX() >> 4, pos.getZ() >> 4) instanceof LevelChunk psChunk && net.paperstream.chunk.FreshChunks.isWarming(psChunk)) {
++                this.scheduleTick(pos, type, net.paperstream.chunk.FreshChunks.ticksLeft(psChunk)); // PaperStream - fresh chunk warm up
+             } else
+             // PaperStream end - redstone clock guard
+             state.tick(this, pos, this.random);
+diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
+index 1530810cdb74810e37e3e22ce4fcda4ee7511055..09c59a25c48167bf4c076952360f47c5dab534fe 100755
+--- a/net/minecraft/world/entity/Entity.java
++++ b/net/minecraft/world/entity/Entity.java
+@@ -373,6 +373,7 @@ public abstract class Entity
+     protected int numCollisions = 0; // Paper - Cap entity collisions
+     public boolean fromNetherPortal; // Paper - Add option to nerf pigmen from nether portals
+     public boolean spawnedViaMobSpawner; // Paper - Yes this name is similar to above, upstream took the better one
++    public boolean psFromDisk; // PaperStream - loaded from a chunk, not freshly spawned
+     // Paper start
+     public @Nullable Vec3 origin;
+     public @Nullable UUID originWorld;
+@@ -2869,6 +2870,7 @@ public abstract class Entity
+             }
+ 
+             spawnedViaMobSpawner = input.getBooleanOr("Paper.FromMobSpawner", false); // Restore entity's from mob spawner status
++            this.psFromDisk = true; // PaperStream - fresh chunk warm up
+             fromNetherPortal = input.getBooleanOr("Paper.FromNetherPortal", false);
+             input.getString("Paper.SpawnReason").ifPresent(spawnReasonName -> {
+                 try {
+diff --git a/net/minecraft/world/level/chunk/LevelChunk.java b/net/minecraft/world/level/chunk/LevelChunk.java
+index 681563230061212afa7994c8eb16c068754db5dd..1e532ab3129b98f2097ebb65535f4bd35b087c1d 100755
+--- a/net/minecraft/world/level/chunk/LevelChunk.java
++++ b/net/minecraft/world/level/chunk/LevelChunk.java
+@@ -627,9 +627,16 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+         }
+     }
+ 
++    // PaperStream start - fresh chunk warm up
++    public int psLoadedAt = Integer.MIN_VALUE / 2;
++    public int psWarmCheckedAt = Integer.MIN_VALUE;
++    public boolean psWarmResult;
++    // PaperStream end - fresh chunk warm up
++
+     // CraftBukkit start
+     public void loadCallback() {
+         if (this.loadedTicketLevel) { LOGGER.error("Double calling chunk load!", new Throwable()); } // Paper
++        this.psLoadedAt = net.minecraft.server.MinecraftServer.currentTick; // PaperStream - fresh chunk warm up
+         // Paper start
+         this.loadedTicketLevel = true;
+         // Paper end
+@@ -942,7 +949,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+         public void tick() {
+             if (!this.blockEntity.isRemoved() && this.blockEntity.hasLevel()) {
+                 BlockPos pos = this.blockEntity.getBlockPos();
+-                if (LevelChunk.this.isTicking(pos)) {
++                if (LevelChunk.this.isTicking(pos) && !net.paperstream.chunk.FreshChunks.isWarming(LevelChunk.this)) { // PaperStream - fresh chunk warm up
+                     try {
+                         ProfilerFiller profiler = Profiler.get();
+                         profiler.push(this::getType);

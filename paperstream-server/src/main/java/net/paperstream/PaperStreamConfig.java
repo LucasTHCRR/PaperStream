@@ -78,6 +78,11 @@ public final class PaperStreamConfig {
     public static int redstoneCooldownSeconds = 60;
     public static boolean redstoneNotifyOps = true;
 
+    // chunks.fresh-chunks
+    public static boolean freshChunks = true;
+    public static int freshChunksWarmupTicks = 100;
+    public static int freshChunksPlayerRadius = 2;
+
     // startup.plugin-check
     public static boolean pluginCheck = true;
 
@@ -204,6 +209,13 @@ public final class PaperStreamConfig {
         redstoneNotifyOps = bool(yaml, "world.redstone-clocks.notify", redstoneNotifyOps,
             "Tell players with paperstream.notify.redstone (ops by default) where a clock was slowed down. The console always gets it.");
 
+        freshChunks = bool(yaml, "chunks.fresh-chunks.enabled", freshChunks,
+            "Chunks that were just loaded and have no player close by wait a moment before their block entities, leaf updates and mob spawning run. Mobs loaded from the world file follow the normal activation range right away instead of ticking fully for 10 seconds. Saves a lot while players fly through the world.");
+        freshChunksWarmupTicks = integer(yaml, "chunks.fresh-chunks.warmup-seconds", freshChunksWarmupTicks / 20,
+            "Seconds a freshly loaded chunk waits. A player coming close ends the wait at once.") * 20;
+        freshChunksPlayerRadius = integer(yaml, "chunks.fresh-chunks.player-radius", freshChunksPlayerRadius,
+            "Chunks around a player that always tick right away.");
+
         pluginCheck = bool(yaml, "startup.plugin-check", pluginCheck,
             "After the start, list plugins that failed to start and plugins that do the same job as a PaperStream feature.");
 
@@ -261,6 +273,8 @@ public final class PaperStreamConfig {
         activationCheckInterval = Math.max(1, Math.min(10, activationCheckInterval));
         fastTravelSimDistance = Math.max(2, Math.min(32, fastTravelSimDistance));
         fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);
+        freshChunksWarmupTicks = Math.max(20, Math.min(1200, freshChunksWarmupTicks));
+        freshChunksPlayerRadius = Math.max(0, Math.min(8, freshChunksPlayerRadius));
         redstoneMaxPerSecond = Math.max(20, redstoneMaxPerSecond);
         redstoneTriggerSeconds = Math.max(1, redstoneTriggerSeconds);
         redstoneThrottledPerSecond = Math.max(1, redstoneThrottledPerSecond);

@@ -57,6 +57,8 @@ public enum ConfigProfile {
         v.put("world.idle.after-seconds", 60);
         v.put("world.redstone-clocks.max-per-second", 400);
         v.put("world.redstone-clocks.throttled-per-second", 40);
+        v.put("chunks.fresh-chunks.enabled", true);
+        v.put("chunks.fresh-chunks.warmup-seconds", 5);
         switch (this) {
             case LOW -> {
                 v.put("entities.tick-throttle.near-distance", 48.0D);
@@ -67,6 +69,7 @@ public enum ConfigProfile {
                 v.put("world.explosions.max-per-chunk-per-tick", 64);
                 v.put("world.redstone-clocks.max-per-second", 600);
                 v.put("world.redstone-clocks.throttled-per-second", 60);
+                v.put("chunks.fresh-chunks.enabled", false);
             }
             case PERFORMANCE -> {
                 v.put("chunks.generation-boost", 1.0D);
@@ -82,6 +85,7 @@ public enum ConfigProfile {
                 v.put("world.idle.after-seconds", 30);
                 v.put("world.redstone-clocks.max-per-second", 250);
                 v.put("world.redstone-clocks.throttled-per-second", 20);
+                v.put("chunks.fresh-chunks.warmup-seconds", 8);
             }
             default -> {
             }
