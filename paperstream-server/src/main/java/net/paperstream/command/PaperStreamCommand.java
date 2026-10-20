@@ -18,12 +18,12 @@ import org.bukkit.entity.Player;
 
 public final class PaperStreamCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload", "profile", "pair", "proxy");
+    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload", "profile", "migrate", "pair", "proxy");
 
     public PaperStreamCommand(final String name) {
         super(name);
         this.description = "PaperStream status and tools";
-        this.usageMessage = "/paperstream <info|mspt|pregen|reload|profile|pair|proxy>";
+        this.usageMessage = "/paperstream <info|mspt|pregen|reload|profile|migrate|pair|proxy>";
         this.setPermission("paperstream.command");
     }
 
@@ -40,6 +40,7 @@ public final class PaperStreamCommand extends Command {
             case "pair" -> this.pair(sender, args);
             case "proxy" -> this.proxy(sender, args);
             case "profile" -> this.profile(sender, args);
+            case "migrate" -> this.migrate(sender, args);
             case "reload" -> {
                 if (args.length >= 2 && args[1].equalsIgnoreCase("properties")) {
                     PropertiesReload.reload(sender);
@@ -52,6 +53,46 @@ public final class PaperStreamCommand extends Command {
             default -> sender.sendMessage("Usage: " + this.usageMessage);
         }
         return true;
+    }
+
+    private void migrate(final CommandSender sender, final String[] args) {
+        final List<net.paperstream.migrate.ConfigMigration.Difference> diffs = net.paperstream.migrate.ConfigMigration.differences();
+        if (diffs.isEmpty()) {
+            sender.sendMessage("Your Paper configs already match everything PaperStream recommends.");
+            return;
+        }
+        final boolean apply = args.length >= 2 && args[1].equalsIgnoreCase("apply");
+        if (!apply) {
+            sender.sendMessage(diffs.size() + " settings differ from what PaperStream recommends:");
+            int saveLimits = 0;
+            for (final net.paperstream.migrate.ConfigMigration.Difference diff : diffs) {
+                final var rec = diff.recommendation();
+                if (rec.path().startsWith("chunks.entity-per-chunk-save-limit.")) {
+                    ++saveLimits;
+                    continue;
+                }
+                sender.sendMessage("  " + rec.file() + " " + rec.path() + ": " + diff.current() + " -> " + rec.value() + " (" + rec.reason() + ")");
+            }
+            if (saveLimits > 0) {
+                sender.sendMessage("  config/paper-world-defaults.yml chunks.entity-per-chunk-save-limit: " + saveLimits
+                    + " entity types without a limit (projectiles, items, minecarts, TNT; lag machines that survive restarts)");
+            }
+            sender.sendMessage("None of these change how farms work. Take them over with /paperstream migrate apply");
+            return;
+        }
+        if (args.length < 3 || !args[2].equalsIgnoreCase("confirm")) {
+            sender.sendMessage("This changes " + diffs.size() + " settings in your config files.");
+            sender.sendMessage("We recommend a backup of config/ and spigot.yml first. PaperStream does not make one by itself.");
+            sender.sendMessage("Run /paperstream migrate apply confirm to go ahead.");
+            return;
+        }
+        try {
+            final List<String> files = net.paperstream.migrate.ConfigMigration.apply(diffs);
+            sender.sendMessage(diffs.size() + " settings written to " + String.join(", ", files) + ".");
+            sender.sendMessage("Restart the server so every change takes effect.");
+        } catch (final java.io.IOException ex) {
+            sender.sendMessage("Could not write the config files: " + ex.getMessage());
+        }
     }
 
     private void profile(final CommandSender sender, final String[] args) {
@@ -247,6 +288,10 @@ public final class PaperStreamCommand extends Command {
                     out.add(p.id);
                 }
             }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
+            out.add("apply");
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("migrate") && args[1].equalsIgnoreCase("apply")) {
+            out.add("confirm");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {
             out.add("properties");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("proxy")) {

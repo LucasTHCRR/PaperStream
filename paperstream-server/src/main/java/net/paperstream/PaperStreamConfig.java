@@ -78,6 +78,9 @@ public final class PaperStreamConfig {
     public static int redstoneCooldownSeconds = 60;
     public static boolean redstoneNotifyOps = true;
 
+    // startup.plugin-check
+    public static boolean pluginCheck = true;
+
     // entities.stack-guard
     public static boolean entityStackGuard = true;
     public static int entityStackPerBlock = 8;
@@ -200,6 +203,9 @@ public final class PaperStreamConfig {
             "How long a chunk stays slowed down. It starts again while the clock keeps running.");
         redstoneNotifyOps = bool(yaml, "world.redstone-clocks.notify", redstoneNotifyOps,
             "Tell players with paperstream.notify.redstone (ops by default) where a clock was slowed down. The console always gets it.");
+
+        pluginCheck = bool(yaml, "startup.plugin-check", pluginCheck,
+            "After the start, list plugins that failed to start and plugins that do the same job as a PaperStream feature.");
 
         entityStackGuard = bool(yaml, "entities.stack-guard.enabled", entityStackGuard,
             "Refuse placing armor stands, minecarts or boats once too many are in one spot (lag machines). Existing ones stay, plugins and commands are never limited.");

@@ -55,6 +55,7 @@ public final class PaperStream {
             if (!bannerShown) {
                 bannerShown = true;
                 printBanner();
+                net.paperstream.migrate.PluginCheck.run();
             }
         });
         server.addTickable(Pregenerator::tick);
