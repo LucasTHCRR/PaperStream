@@ -78,6 +78,11 @@ public final class PaperStreamConfig {
     public static int redstoneCooldownSeconds = 60;
     public static boolean redstoneNotifyOps = true;
 
+    // chunks.unload
+    public static int unloadDelayTicks = 600;
+    public static int unloadMinPerTick = 50;
+    public static double unloadFractionPerTick = 0.05D;
+
     // chunks.fresh-chunks
     public static boolean freshChunks = true;
     public static int freshChunksWarmupTicks = 100;
@@ -209,6 +214,14 @@ public final class PaperStreamConfig {
         redstoneNotifyOps = bool(yaml, "world.redstone-clocks.notify", redstoneNotifyOps,
             "Tell players with paperstream.notify.redstone (ops by default) where a clock was slowed down. The console always gets it.");
 
+        unloadDelayTicks = integer(yaml, "chunks.unload.delay-seconds", unloadDelayTicks < 0 ? -1 : unloadDelayTicks / 20,
+            "Chunks a player left stay loaded this long, so flying back or turning around does not read them from disk again. Costs some RAM. -1 = use delay-chunk-unloads-by from paper-world-defaults.yml (10 seconds in Paper).");
+        unloadDelayTicks = unloadDelayTicks < 0 ? -1 : unloadDelayTicks * 20;
+        unloadMinPerTick = integer(yaml, "chunks.unload.min-per-tick", unloadMinPerTick,
+            "Chunks unloaded at least per tick. Lower = unloading is spread over more ticks, smoother but RAM is freed slower. Paper: 50.");
+        unloadFractionPerTick = number(yaml, "chunks.unload.fraction-per-tick", unloadFractionPerTick,
+            "Share of the waiting chunks unloaded per tick when more are waiting. Paper: 0.05.");
+
         freshChunks = bool(yaml, "chunks.fresh-chunks.enabled", freshChunks,
             "Chunks that were just loaded and have no player close by wait a moment before their block entities, leaf updates and mob spawning run. Mobs loaded from the world file follow the normal activation range right away instead of ticking fully for 10 seconds. Saves a lot while players fly through the world.");
         freshChunksWarmupTicks = integer(yaml, "chunks.fresh-chunks.warmup-seconds", freshChunksWarmupTicks / 20,
@@ -273,6 +286,9 @@ public final class PaperStreamConfig {
         activationCheckInterval = Math.max(1, Math.min(10, activationCheckInterval));
         fastTravelSimDistance = Math.max(2, Math.min(32, fastTravelSimDistance));
         fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);
+        unloadDelayTicks = unloadDelayTicks < 0 ? -1 : Math.min(20 * 600, unloadDelayTicks);
+        unloadMinPerTick = Math.max(1, unloadMinPerTick);
+        unloadFractionPerTick = Math.max(0.0D, Math.min(1.0D, unloadFractionPerTick));
         freshChunksWarmupTicks = Math.max(20, Math.min(1200, freshChunksWarmupTicks));
         freshChunksPlayerRadius = Math.max(0, Math.min(8, freshChunksPlayerRadius));
         redstoneMaxPerSecond = Math.max(20, redstoneMaxPerSecond);

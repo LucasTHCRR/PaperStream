@@ -69,6 +69,7 @@ public final class PaperStream {
             RegionFileVersion.configure(compression);
         }
         PlayerChunkPrefetch.applyConfig();
+        io.papermc.paper.FeatureHooks.applyPlayerChunkUnloadDelay();
         LOGGER.info("PaperStream: profile {}, region compression {}, directional loading {}, prefetch {}",
             PaperStreamConfig.profile.id, compression, PaperStreamConfig.directionalLoading, PaperStreamConfig.prefetch);
     }

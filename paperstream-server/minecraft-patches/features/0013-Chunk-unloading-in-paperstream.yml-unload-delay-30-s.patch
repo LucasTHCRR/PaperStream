@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Wed, 21 Oct 2026 02:07:30 +0200
+Subject: [PATCH] Chunk unloading in paperstream.yml: unload delay (30 s by
+ default) and unload rate, part of the profiles
+
+
+diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
+index 277bc96efefed4525864f6afb2294d677ff038c7..bf6efc6eb9c202062ba8057cac17a2a9a87892b8 100755
+--- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
++++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
+@@ -209,12 +209,12 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
+ 
+     @Override
+     public int configMinChunkUnloadCount(final ServerLevel world) {
+-        return 50;
++        return net.paperstream.PaperStreamConfig.unloadMinPerTick; // PaperStream - configurable unload rate
+     }
+ 
+     @Override
+     public double configMinChunkUnloadFraction(final ServerLevel world) {
+-        return 0.05;
++        return net.paperstream.PaperStreamConfig.unloadFractionPerTick; // PaperStream - configurable unload rate
+     }
+ 
+     @Override
+diff --git a/io/papermc/paper/FeatureHooks.java b/io/papermc/paper/FeatureHooks.java
+index 504fdb2c4000eafae4341ec8b24ce9cb0fcdc274..4da0ea128cea7bad78e7502784203aa7841556cc 100755
+--- a/io/papermc/paper/FeatureHooks.java
++++ b/io/papermc/paper/FeatureHooks.java
+@@ -37,9 +37,19 @@ public final class FeatureHooks {
+         return ((ca.spottedleaf.moonrise.patches.chunk_system.level.entity.EntityLookup)level.getEntities()).getAllMapped(); // Paper - rewrite chunk system
+     }
+ 
++    // PaperStream start - unload delay from paperstream.yml wins over delay-chunk-unloads-by
++    private static long psPaperUnloadDelay = 200L;
++
+     public static void setPlayerChunkUnloadDelay(final long ticks) {
+-        ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.setUnloadDelay(ticks); // Paper - rewrite chunk system
++        psPaperUnloadDelay = ticks;
++        applyPlayerChunkUnloadDelay();
++    }
++
++    public static void applyPlayerChunkUnloadDelay() {
++        final int own = net.paperstream.PaperStreamConfig.unloadDelayTicks;
++        ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.setUnloadDelay(own >= 0 ? own : psPaperUnloadDelay); // Paper - rewrite chunk system
+     }
++    // PaperStream end - unload delay from paperstream.yml
+ 
+     public static void registerPaperCommands(final Map<Set<String>, PaperSubcommand> commands) {
+         commands.put(Set.of("fixlight"), new FixLightCommand()); // Paper - rewrite chunk system
