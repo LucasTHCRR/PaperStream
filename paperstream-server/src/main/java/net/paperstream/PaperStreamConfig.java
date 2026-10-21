@@ -144,6 +144,13 @@ public final class PaperStreamConfig {
                 yaml.set(entry.getKey(), entry.getValue());
             }
             LOGGER.info("PaperStream profile '{}' applied: {}", chosen.id, chosen.description);
+        } else if (chosen != ConfigProfile.CUSTOM) {
+            // settings added by an update after the profile was chosen get the profile's value, not the medium default
+            for (final java.util.Map.Entry<String, Object> entry : chosen.settings().entrySet()) {
+                if (!yaml.contains(entry.getKey())) {
+                    yaml.set(entry.getKey(), entry.getValue());
+                }
+            }
         }
         profile = chosen;
         yaml.set("profile-applied", chosen.id);
