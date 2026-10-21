@@ -187,11 +187,13 @@ public final class PaperStreamCommand extends Command {
         long pathsDenied = 0L;
         long explosionsDenied = 0L;
         long redstonePostponed = 0L;
+        int itemsThrottled = 0;
         int redstoneChunks = 0;
         for (final net.minecraft.server.level.ServerLevel level : net.minecraft.server.MinecraftServer.getServer().getAllLevels()) {
             pathsDenied += level.psLimits.pathsDenied;
             explosionsDenied += level.psLimits.explosionsDenied;
             redstonePostponed += level.psRedstone.postponed;
+            itemsThrottled += level.psLimits.throttledItems;
             redstoneChunks += level.psRedstone.throttledChunks;
             if (level.psLimits.isLagging()) {
                 sender.sendMessage("Lag protection active in " + level.getWorld().getName());
@@ -199,6 +201,9 @@ public final class PaperStreamCommand extends Command {
         }
         sender.sendMessage("Paths postponed: " + pathsDenied + ", explosions dropped: " + explosionsDenied
             + (net.paperstream.world.IdleMode.isIdle() ? ", idle mode on" : ""));
+        if (PaperStreamConfig.itemPiles && itemsThrottled > 0) {
+            sender.sendMessage("Items in big piles ticking less often right now: " + itemsThrottled);
+        }
         if (PaperStreamConfig.redstoneGuard) {
             sender.sendMessage("Redstone clocks slowed down: " + redstoneChunks + " chunks, " + redstonePostponed + " updates postponed");
         }

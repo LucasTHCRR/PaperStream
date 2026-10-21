@@ -62,6 +62,7 @@ public enum ConfigProfile {
         v.put("chunks.unload.delay-seconds", 30);
         v.put("chunks.unload.min-per-tick", 50);
         v.put("chunks.unload.fraction-per-tick", 0.05D);
+        v.put("entities.item-piles.max-per-block", 64);
         switch (this) {
             case LOW -> {
                 v.put("entities.tick-throttle.near-distance", 48.0D);
@@ -74,6 +75,7 @@ public enum ConfigProfile {
                 v.put("world.redstone-clocks.throttled-per-second", 60);
                 v.put("chunks.fresh-chunks.enabled", false);
                 v.put("chunks.unload.delay-seconds", 10);
+                v.put("entities.item-piles.max-per-block", 128);
             }
             case PERFORMANCE -> {
                 v.put("chunks.generation-boost", 1.0D);
@@ -92,6 +94,7 @@ public enum ConfigProfile {
                 v.put("chunks.fresh-chunks.warmup-seconds", 8);
                 v.put("chunks.unload.min-per-tick", 25);
                 v.put("chunks.unload.fraction-per-tick", 0.03D);
+                v.put("entities.item-piles.max-per-block", 48);
             }
             default -> {
             }

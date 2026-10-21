@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Wed, 21 Oct 2026 02:50:24 +0200
+Subject: [PATCH] Item piles: more than 64 dropped items in one block tick only
+ once per second, nothing is removed
+
+
+diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
+index f41437f61c6bbe278620f3b8af1fd0d04874254b..eb728280bc0d51c1f869559603b2cec8cfdaa63c 100644
+--- a/io/papermc/paper/entity/activation/ActivationRange.java
++++ b/io/papermc/paper/entity/activation/ActivationRange.java
+@@ -296,6 +296,11 @@ public final class ActivationRange {
+      * @return
+      */
+     public static boolean checkIfActive(final Entity entity) {
++        // PaperStream start - item piles tick less often
++        if (entity instanceof ItemEntity psItem && ((net.minecraft.server.level.ServerLevel)psItem.level()).psLimits.isThrottledItem(psItem)) {
++            return false;
++        }
++        // PaperStream end - item piles tick less often
+         // Never safe to skip fireworks or item gravity
+         if (entity instanceof FireworkRocketEntity || (entity instanceof ItemEntity && (entity.tickCount + entity.getId()) % 4 == 0)) { // Needed for item gravity, see ItemEntity tick
+             return true;

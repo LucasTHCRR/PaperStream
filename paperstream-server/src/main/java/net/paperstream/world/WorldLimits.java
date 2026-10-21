@@ -20,6 +20,13 @@ public final class WorldLimits {
     public long pathsDenied;
     public long explosionsDenied;
 
+    // item piles: counts of the previous tick decide, counts of this tick are collected meanwhile
+    private int itemTick = Integer.MIN_VALUE;
+    private Long2IntOpenHashMap itemsLastTick = new Long2IntOpenHashMap();
+    private Long2IntOpenHashMap itemsThisTick = new Long2IntOpenHashMap();
+    public int throttledItems;
+    private int throttledItemsThisTick;
+
     public WorldLimits(final ServerLevel level) {
         this.level = level;
     }
@@ -76,6 +83,38 @@ public final class WorldLimits {
             ++this.explosionsDenied;
             return false;
         }
+        return true;
+    }
+
+    /**
+     * Item piles: more than entities.item-piles.max-per-block dropped items in one block tick only
+     * every few ticks. Nothing is removed, picking up and hoppers work as before, age keeps counting.
+     *
+     * @return true if the item should skip this tick
+     */
+    public boolean isThrottledItem(final net.minecraft.world.entity.item.ItemEntity item) {
+        if (!PaperStreamConfig.itemPiles) {
+            return false;
+        }
+        final int now = MinecraftServer.currentTick;
+        if (now != this.itemTick) {
+            final Long2IntOpenHashMap last = this.itemsLastTick;
+            this.itemsLastTick = this.itemsThisTick;
+            this.itemsThisTick = last;
+            this.itemsThisTick.clear();
+            this.throttledItems = this.throttledItemsThisTick;
+            this.throttledItemsThisTick = 0;
+            this.itemTick = now;
+        }
+        final long key = item.blockPosition().asLong();
+        this.itemsThisTick.addTo(key, 1);
+        if (this.itemsLastTick.get(key) <= PaperStreamConfig.itemPilesMaxPerBlock) {
+            return false;
+        }
+        if ((item.getId() + now) % PaperStreamConfig.itemPilesInterval == 0) {
+            return false;
+        }
+        ++this.throttledItemsThisTick;
         return true;
     }
 

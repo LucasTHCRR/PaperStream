@@ -78,6 +78,11 @@ public final class PaperStreamConfig {
     public static int redstoneCooldownSeconds = 60;
     public static boolean redstoneNotifyOps = true;
 
+    // entities.item-piles
+    public static boolean itemPiles = true;
+    public static int itemPilesMaxPerBlock = 64;
+    public static int itemPilesInterval = 20;
+
     // chunks.unload
     public static int unloadDelayTicks = 600;
     public static int unloadMinPerTick = 50;
@@ -232,6 +237,13 @@ public final class PaperStreamConfig {
         pluginCheck = bool(yaml, "startup.plugin-check", pluginCheck,
             "After the start, list plugins that failed to start and plugins that do the same job as a PaperStream feature.");
 
+        itemPiles = bool(yaml, "entities.item-piles.enabled", itemPiles,
+            "Dropped items piling up in one block (item lag machines, broken farms) tick only every few ticks. Nothing is removed: picking up, hoppers and despawning work as before. Death drops never reach the limit.");
+        itemPilesMaxPerBlock = integer(yaml, "entities.item-piles.max-per-block", itemPilesMaxPerBlock,
+            "Dropped items in one block up to which everything ticks normally.");
+        itemPilesInterval = integer(yaml, "entities.item-piles.tick-interval", itemPilesInterval,
+            "Items in a bigger pile tick only every this many ticks (20 = once per second).");
+
         entityStackGuard = bool(yaml, "entities.stack-guard.enabled", entityStackGuard,
             "Refuse placing armor stands, minecarts or boats once too many are in one spot (lag machines). Existing ones stay, plugins and commands are never limited.");
         entityStackPerBlock = integer(yaml, "entities.stack-guard.max-per-block", entityStackPerBlock,
@@ -288,6 +300,8 @@ public final class PaperStreamConfig {
         fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);
         unloadDelayTicks = unloadDelayTicks < 0 ? -1 : Math.min(20 * 600, unloadDelayTicks);
         unloadMinPerTick = Math.max(1, unloadMinPerTick);
+        itemPilesMaxPerBlock = Math.max(48, itemPilesMaxPerBlock);
+        itemPilesInterval = Math.max(2, Math.min(100, itemPilesInterval));
         unloadFractionPerTick = Math.max(0.0D, Math.min(1.0D, unloadFractionPerTick));
         freshChunksWarmupTicks = Math.max(20, Math.min(1200, freshChunksWarmupTicks));
         freshChunksPlayerRadius = Math.max(0, Math.min(8, freshChunksPlayerRadius));
