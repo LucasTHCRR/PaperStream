@@ -86,9 +86,9 @@ Server jars are on the [releases page](https://github.com/LucasTHCRR/PaperStream
 
 | Minecraft | Jar | Java |
 |---|---|---|
-| 26.3 | `paperstream-26.3-alpha.1.jar` | 25 |
-| 26.2 | `paperstream-26.2-alpha.1.jar` | 25 |
-| 1.21.11 | `paperstream-1.21.11-alpha.1.jar` | 21 |
+| 26.3 | `paperstream-26.3-alpha.2.jar` | 25 |
+| 26.2 | `paperstream-26.2-alpha.2.jar` | 25 |
+| 1.21.11 | `paperstream-1.21.11-alpha.2.jar` | 21 |
 
 ## Building
 
