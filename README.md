@@ -82,7 +82,12 @@ Numbers from local test servers with bots, Minecraft 26.2.
 
 ## Downloads
 
-There are no releases yet.
+Server jars are on the [releases page](https://github.com/LucasTHCRR/PaperStream/releases):
+
+| Minecraft | Jar | Java |
+|---|---|---|
+| 26.2 | `paperstream-26.2-alpha.1.jar` | 25 |
+| 1.21.11 | `paperstream-1.21.11-alpha.1.jar` | 21 |
 
 ## Building
 
