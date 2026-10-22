@@ -83,6 +83,10 @@ public final class PaperStreamConfig {
     public static int itemPilesMaxPerBlock = 64;
     public static int itemPilesInterval = 20;
 
+    // chunks.worker-priority, chunks.lag-generation-factor
+    public static int workerNice = 5;
+    public static double lagGenerationFactor = 0.5D;
+
     // chunks.unload
     public static int unloadDelayTicks = 600;
     public static int unloadMinPerTick = 50;
@@ -226,6 +230,11 @@ public final class PaperStreamConfig {
         redstoneNotifyOps = bool(yaml, "world.redstone-clocks.notify", redstoneNotifyOps,
             "Tell players with paperstream.notify.redstone (ops by default) where a clock was slowed down. The console always gets it.");
 
+        workerNice = integer(yaml, "chunks.worker-priority.nice", workerNice,
+            "Linux only: how many nice steps the chunk worker threads run below the main thread (0 = same priority, up to 19). With 2 to 4 cores the main thread then gets the CPU first while chunks generate. Needs a restart.");
+        lagGenerationFactor = number(yaml, "chunks.lag-generation-factor", lagGenerationFactor,
+            "While a world is lagging (world.lag-protection.mspt), players may generate only this share of chunks at once. 1 = no change.");
+
         unloadDelayTicks = integer(yaml, "chunks.unload.delay-seconds", unloadDelayTicks < 0 ? -1 : unloadDelayTicks / 20,
             "Chunks a player left stay loaded this long, so flying back or turning around does not read them from disk again. Costs some RAM. -1 = use delay-chunk-unloads-by from paper-world-defaults.yml (10 seconds in Paper).");
         unloadDelayTicks = unloadDelayTicks < 0 ? -1 : unloadDelayTicks * 20;
@@ -307,6 +316,8 @@ public final class PaperStreamConfig {
         fastTravelRestoreTicks = Math.max(20, fastTravelRestoreTicks);
         unloadDelayTicks = unloadDelayTicks < 0 ? -1 : Math.min(20 * 600, unloadDelayTicks);
         unloadMinPerTick = Math.max(1, unloadMinPerTick);
+        workerNice = Math.max(0, Math.min(19, workerNice));
+        lagGenerationFactor = Math.max(0.1D, Math.min(1.0D, lagGenerationFactor));
         itemPilesMaxPerBlock = Math.max(48, itemPilesMaxPerBlock);
         itemPilesInterval = Math.max(2, Math.min(100, itemPilesInterval));
         unloadFractionPerTick = Math.max(0.0D, Math.min(1.0D, unloadFractionPerTick));
@@ -328,6 +339,17 @@ public final class PaperStreamConfig {
     public static int autoWorkerThreads(final int cores) {
         final ConfigProfile fromFile = ConfigProfile.byId(YamlConfiguration.loadConfiguration(FILE).getString("profile", ConfigProfile.MEDIUM.id));
         return (fromFile == null ? ConfigProfile.MEDIUM : fromFile).workerThreads(cores);
+    }
+
+    /** Nice value for chunk worker threads, read before the rest of the config is loaded (workers start early). */
+    public static int workerNiceFromFile() {
+        final YamlConfiguration yaml = YamlConfiguration.loadConfiguration(FILE);
+        if (yaml.contains("chunks.worker-priority.nice")) {
+            return Math.max(0, Math.min(19, yaml.getInt("chunks.worker-priority.nice")));
+        }
+        final ConfigProfile fromFile = ConfigProfile.byId(yaml.getString("profile", ConfigProfile.MEDIUM.id));
+        final Object value = (fromFile == null ? ConfigProfile.MEDIUM : fromFile).settings().get("chunks.worker-priority.nice");
+        return value instanceof Number n ? n.intValue() : workerNice;
     }
 
     /** Switches the profile in paperstream.yml and loads it. */

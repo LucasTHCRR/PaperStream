@@ -63,6 +63,8 @@ public enum ConfigProfile {
         v.put("chunks.unload.min-per-tick", 50);
         v.put("chunks.unload.fraction-per-tick", 0.05D);
         v.put("entities.item-piles.max-per-block", 64);
+        v.put("chunks.worker-priority.nice", 5);
+        v.put("chunks.lag-generation-factor", 0.5D);
         switch (this) {
             case LOW -> {
                 v.put("entities.tick-throttle.near-distance", 48.0D);
@@ -76,6 +78,8 @@ public enum ConfigProfile {
                 v.put("chunks.fresh-chunks.enabled", false);
                 v.put("chunks.unload.delay-seconds", 10);
                 v.put("entities.item-piles.max-per-block", 128);
+                v.put("chunks.worker-priority.nice", 0);
+                v.put("chunks.lag-generation-factor", 1.0D);
             }
             case PERFORMANCE -> {
                 v.put("chunks.generation-boost", 1.0D);
@@ -95,6 +99,7 @@ public enum ConfigProfile {
                 v.put("chunks.unload.min-per-tick", 25);
                 v.put("chunks.unload.fraction-per-tick", 0.03D);
                 v.put("entities.item-piles.max-per-block", 48);
+                v.put("chunks.worker-priority.nice", 10);
             }
             default -> {
             }

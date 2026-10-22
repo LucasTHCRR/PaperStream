@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 09:11:43 +0200
+Subject: [PATCH] Chunk workers run below the main thread's CPU priority on
+ Linux, lagging worlds generate less at once
+
+
+diff --git a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
+index 96d53fdf259acf0e7043bbb4c99708cf830967ba..4c6070d058f3dc00e3710ca88307c4885c46e27d 100755
+--- a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
++++ b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
+@@ -22,7 +22,7 @@ public final class MoonriseCommon {
+ 
+             @Override
+             public Thread newThread(final Runnable run) {
+-                final Thread thread = new Thread(run, PlatformHooks.get().getBrand() + " Common Worker #" + this.idGenerator.getAndIncrement());
++                final Thread thread = new Thread(net.paperstream.chunk.WorkerPriority.wrap(run), PlatformHooks.get().getBrand() + " Common Worker #" + this.idGenerator.getAndIncrement()); // PaperStream - lower priority than the main thread
+ 
+                 thread.setDaemon(true);
+                 thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {

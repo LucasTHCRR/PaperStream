@@ -213,7 +213,11 @@ public final class PlayerChunkPrefetch {
      * Factor for the concurrent chunk generation limit: fast players get more, unless the world lags.
      */
     public double generationBoost(final ServerLevel world) {
-        if (PaperStreamConfig.genBoost <= 1.0D || world.psLimits.isLagging()) {
+        if (world.psLimits.isLagging()) {
+            // a lagging world generates less at once, so the main thread gets less to finish per tick
+            return PaperStreamConfig.lagGenerationFactor;
+        }
+        if (PaperStreamConfig.genBoost <= 1.0D) {
             return 1.0D;
         }
         final double speed = Math.sqrt(this.velX * this.velX + this.velZ * this.velZ);
