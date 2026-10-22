@@ -5,7 +5,7 @@ Subject: [PATCH] Chunk send budget and villager brain throttle
 
 
 diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
-index 0278444e09ea52de97ee4bcec24c6782e4dcbaed..04144daf262f1397471fd83a2cb7642c3b1e6833 100644
+index a7c00b11c4cbf504452d41e67c786ca604df9902..d045a14c59dbd1a6b03a1e6992a3ec977edaa1ab 100644
 --- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 +++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 @@ -850,6 +850,12 @@ public final class RegionizedPlayerChunkLoader {
@@ -32,10 +32,10 @@ index 0278444e09ea52de97ee4bcec24c6782e4dcbaed..04144daf262f1397471fd83a2cb7642c
                  if (this.removed) {
                      // sendChunk may invoke plugin logic
 diff --git a/net/minecraft/world/entity/npc/villager/Villager.java b/net/minecraft/world/entity/npc/villager/Villager.java
-index 4f8439afa4ea602b662e68e6b86e9d927fb6a481..e7fc5c072901d0a2b9efb1b8619f1a73ca342bc3 100755
+index e6f3961f1573dffef51b8ee724a52800c8a6004b..a807295658c119ac98f046c66edb50e143a90160 100755
 --- a/net/minecraft/world/entity/npc/villager/Villager.java
 +++ b/net/minecraft/world/entity/npc/villager/Villager.java
-@@ -95,6 +95,10 @@ import org.jspecify.annotations.Nullable;
+@@ -97,6 +97,10 @@ import org.jspecify.annotations.Nullable;
  import org.slf4j.Logger;
  
  public class Villager extends AbstractVillager implements VillagerDataHolder, ReputationEventHandler {
@@ -46,12 +46,12 @@ index 4f8439afa4ea602b662e68e6b86e9d927fb6a481..e7fc5c072901d0a2b9efb1b8619f1a73
      private static final Logger LOGGER = LogUtils.getLogger();
      private static final EntityDataAccessor<VillagerData> DATA_VILLAGER_DATA = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.VILLAGER_DATA);
      private static final EntityDataAccessor<Boolean> DATA_VILLAGER_DATA_FINALIZED = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.BOOLEAN);
-@@ -263,7 +267,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
+@@ -256,7 +260,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
          // Paper end - EAR 2
          ProfilerFiller profiler = Profiler.get();
          profiler.push("villagerBrain");
 -        if (!inactive) this.getBrain().tick(level, this); // Paper - EAR 2
 +        if (!inactive && net.paperstream.entity.VillagerThrottle.shouldTickBrain(this)) this.getBrain().tick(level, this); // Paper - EAR 2 // PaperStream - villager brain throttle
          profiler.pop();
-         if (this.assignProfessionWhenSpawned) {
-             this.assignProfessionWhenSpawned = false;
+         if (this.lastTradedPlayer != null) {
+             level.onReputationEvent(ReputationEventType.TRADE, this.lastTradedPlayer, this);

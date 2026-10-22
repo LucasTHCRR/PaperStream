@@ -20,10 +20,10 @@ index 2003f1aca9177ff0a0ea8ce76ee45509f35bf326..f41437f61c6bbe278620f3b8af1fd0d0
          }
          // immunize leashed entities
 diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
-index 722e4fefbde994fec1f133794945846e7ec1c9a8..6b4c9b417202f21d3532642cad34aeabc2cc23ec 100755
+index a70778a5a6d63b41e49daa9abd45bf769f471809..2e6128a7b0bcbf250810eb50a7526c730f2f2179 100755
 --- a/net/minecraft/server/level/ServerChunkCache.java
 +++ b/net/minecraft/server/level/ServerChunkCache.java
-@@ -614,7 +614,7 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
+@@ -624,7 +624,7 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
              this.level.tickThunder(chunk);
          }
  
@@ -33,10 +33,10 @@ index 722e4fefbde994fec1f133794945846e7ec1c9a8..6b4c9b417202f21d3532642cad34aeab
                  NaturalSpawner.spawnForChunk(this.level, chunk, spawnCookie, spawningCategories);
              }
 diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
-index cc5d0256ded3f0bf85ba20d5cfe78af6f43fa9d6..b85ba7a6dea17ba6ccd48b4f2eb73007dc0fcec4 100755
+index dff257716d405188cc1674d13c4b0f03c6d099de..61ab242ce2e929c6dd8ecbf20d507b53283fb124 100755
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -1370,6 +1370,9 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+@@ -1378,6 +1378,9 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
              // PaperStream start - redstone clock guard
              if (!this.psRedstone.allowTick(pos, type)) {
                  this.scheduleTick(pos, type, this.psRedstone.postponeDelay());
@@ -47,10 +47,10 @@ index cc5d0256ded3f0bf85ba20d5cfe78af6f43fa9d6..b85ba7a6dea17ba6ccd48b4f2eb73007
              // PaperStream end - redstone clock guard
              state.tick(this, pos, this.random);
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index 1530810cdb74810e37e3e22ce4fcda4ee7511055..09c59a25c48167bf4c076952360f47c5dab534fe 100755
+index 5cc94652112c67ca4e7ae6e8b324e9c9f8908d7d..e21b92518938ff3e179485802fd77e6735de2cd4 100755
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -373,6 +373,7 @@ public abstract class Entity
+@@ -379,6 +379,7 @@ public abstract class Entity
      protected int numCollisions = 0; // Paper - Cap entity collisions
      public boolean fromNetherPortal; // Paper - Add option to nerf pigmen from nether portals
      public boolean spawnedViaMobSpawner; // Paper - Yes this name is similar to above, upstream took the better one
@@ -58,7 +58,7 @@ index 1530810cdb74810e37e3e22ce4fcda4ee7511055..09c59a25c48167bf4c076952360f47c5
      // Paper start
      public @Nullable Vec3 origin;
      public @Nullable UUID originWorld;
-@@ -2869,6 +2870,7 @@ public abstract class Entity
+@@ -2939,6 +2940,7 @@ public abstract class Entity
              }
  
              spawnedViaMobSpawner = input.getBooleanOr("Paper.FromMobSpawner", false); // Restore entity's from mob spawner status
@@ -67,10 +67,10 @@ index 1530810cdb74810e37e3e22ce4fcda4ee7511055..09c59a25c48167bf4c076952360f47c5
              input.getString("Paper.SpawnReason").ifPresent(spawnReasonName -> {
                  try {
 diff --git a/net/minecraft/world/level/chunk/LevelChunk.java b/net/minecraft/world/level/chunk/LevelChunk.java
-index 681563230061212afa7994c8eb16c068754db5dd..1e532ab3129b98f2097ebb65535f4bd35b087c1d 100755
+index 76dae652c910e36c860791a8285bd9fee466d5b9..21c9a1a0b4d9564d3922d6f381f8b31c666d2aa4 100755
 --- a/net/minecraft/world/level/chunk/LevelChunk.java
 +++ b/net/minecraft/world/level/chunk/LevelChunk.java
-@@ -627,9 +627,16 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+@@ -631,9 +631,16 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
          }
      }
  
@@ -87,7 +87,7 @@ index 681563230061212afa7994c8eb16c068754db5dd..1e532ab3129b98f2097ebb65535f4bd3
          // Paper start
          this.loadedTicketLevel = true;
          // Paper end
-@@ -942,7 +949,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+@@ -944,7 +951,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
          public void tick() {
              if (!this.blockEntity.isRemoved() && this.blockEntity.hasLevel()) {
                  BlockPos pos = this.blockEntity.getBlockPos();

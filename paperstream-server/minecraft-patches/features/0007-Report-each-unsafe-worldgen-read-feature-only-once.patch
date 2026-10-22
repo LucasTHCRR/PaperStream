@@ -5,10 +5,10 @@ Subject: [PATCH] Report each unsafe worldgen read feature only once
 
 
 diff --git a/net/minecraft/server/level/WorldGenRegion.java b/net/minecraft/server/level/WorldGenRegion.java
-index ebb0923b38a7529e7df531b3947a0421df29d654..2fdab7f9077802b3e324afe61eba9e419705f8fd 100755
+index 6f3b53b40df0263656dc195c82265de8374155d2..20c5ec6e8c6b297dab499aeb9294797e672b3cb2 100755
 --- a/net/minecraft/server/level/WorldGenRegion.java
 +++ b/net/minecraft/server/level/WorldGenRegion.java
-@@ -286,6 +286,8 @@ public class WorldGenRegion implements WorldGenLevel {
+@@ -321,6 +321,8 @@ public class WorldGenRegion implements WorldGenLevel {
          return null;
      }
  
@@ -17,7 +17,7 @@ index ebb0923b38a7529e7df531b3947a0421df29d654..2fdab7f9077802b3e324afe61eba9e41
      private void warnIfReadOutsideWriteZone(final int chunkX, final int chunkZ) {
          if (this.centerChunkX != chunkX || this.centerChunkZ != chunkZ) {
              if (!this.isWithinWriteZone(chunkX, chunkZ)) {
-@@ -305,7 +307,12 @@ public class WorldGenRegion implements WorldGenLevel {
+@@ -340,7 +342,12 @@ public class WorldGenRegion implements WorldGenLevel {
                      + "), step: "
                      + this.generatingStep.targetStatus().getName()
                      + (this.currentlyGenerating == null ? "" : ", currently generating: " + this.currentlyGenerating.get());

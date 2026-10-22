@@ -6,26 +6,28 @@ Subject: [PATCH] Chunk unloading in paperstream.yml: unload delay (30 s by
 
 
 diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-index 277bc96efefed4525864f6afb2294d677ff038c7..bf6efc6eb9c202062ba8057cac17a2a9a87892b8 100755
+index 76f990f150f040b1ad6d7d5b91cfb34ebd6f436a..a1f84d24d20cb96c665af8581902bc0c03015673 100755
 --- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
 +++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-@@ -209,12 +209,12 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
+@@ -209,12 +209,14 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
  
      @Override
      public int configMinChunkUnloadCount(final ServerLevel world) {
--        return 50;
-+        return net.paperstream.PaperStreamConfig.unloadMinPerTick; // PaperStream - configurable unload rate
+-        return world.paperConfig().chunks.minChunkUnloadCount;
++        // PaperStream - configurable unload rate: a value from paperstream.yml other than Paper's default wins over paper-world-defaults.yml
++        return net.paperstream.PaperStreamConfig.unloadMinPerTick != 50 ? net.paperstream.PaperStreamConfig.unloadMinPerTick : world.paperConfig().chunks.minChunkUnloadCount;
      }
  
      @Override
      public double configMinChunkUnloadFraction(final ServerLevel world) {
--        return 0.05;
-+        return net.paperstream.PaperStreamConfig.unloadFractionPerTick; // PaperStream - configurable unload rate
+-        return world.paperConfig().chunks.minChunkUnloadFraction;
++        // PaperStream - configurable unload rate: a value from paperstream.yml other than Paper's default wins over paper-world-defaults.yml
++        return net.paperstream.PaperStreamConfig.unloadFractionPerTick != 0.05D ? net.paperstream.PaperStreamConfig.unloadFractionPerTick : world.paperConfig().chunks.minChunkUnloadFraction;
      }
  
      @Override
 diff --git a/io/papermc/paper/FeatureHooks.java b/io/papermc/paper/FeatureHooks.java
-index 504fdb2c4000eafae4341ec8b24ce9cb0fcdc274..4da0ea128cea7bad78e7502784203aa7841556cc 100755
+index fa322df502d1e6c6d603730372c572f62e70306a..260c220f39e04d19ac38dffee28684d3be791c1c 100755
 --- a/io/papermc/paper/FeatureHooks.java
 +++ b/io/papermc/paper/FeatureHooks.java
 @@ -37,9 +37,19 @@ public final class FeatureHooks {
