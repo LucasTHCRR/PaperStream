@@ -59,6 +59,12 @@ public final class PaperStream {
             }
         });
         server.addTickable(Pregenerator::tick);
+        // workers can start any time, look for new ones once a minute
+        server.addTickable(() -> {
+            if (MinecraftServer.currentTick % 1200 == 40) {
+                net.paperstream.chunk.WorkerPriority.reniceWorkers(ca.spottedleaf.moonrise.common.PlatformHooks.get().getBrand());
+            }
+        });
         net.paperstream.link.ProxyLink.init(server);
         server.addTickable(net.paperstream.link.ProxyLink::tick);
     }

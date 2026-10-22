@@ -5,10 +5,10 @@ Subject: [PATCH] More chunk worker threads by default
 
 
 diff --git a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
-index b9f788693b0c4be48e8a923a3dec50555d135e7e..6380125595fd55927dd69381bb987f4d1dd000fa 100755
+index b7c7de9797d310b68228faf21164ecc701590a59..88f1ac724af6c4f98235d5a528d85e6d42500a9b 100755
 --- a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
 +++ b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
-@@ -40,12 +40,10 @@ public final class MoonriseCommon {
+@@ -36,12 +36,10 @@ public final class MoonriseCommon {
      public static final BalancedPrioritisedThreadPool.OrderedStreamGroup SERVER_GROUP = MoonriseCommon.WORKER_POOL.createOrderedStreamGroup();
  
      public static void adjustWorkerThreads(final int configWorkerThreads, final int configIoThreads) {

@@ -5,10 +5,10 @@ Subject: [PATCH] Activation range check interval
 
 
 diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
-index 76002854a338a447cae8c6b87345fdbdb666a194..2003f1aca9177ff0a0ea8ce76ee45509f35bf326 100644
+index 597780cc012425a2a6d2d24529dc4ac5e3c6e40b..33745cd09f54fc83a8bedc2e2e8e8ef60127b1b1 100644
 --- a/io/papermc/paper/entity/activation/ActivationRange.java
 +++ b/io/papermc/paper/entity/activation/ActivationRange.java
-@@ -122,6 +122,13 @@ public final class ActivationRange {
+@@ -121,6 +121,13 @@ public final class ActivationRange {
       * @param world
       */
      public static void activateEntities(final Level world) {
@@ -22,7 +22,7 @@ index 76002854a338a447cae8c6b87345fdbdb666a194..2003f1aca9177ff0a0ea8ce76ee45509
          final int miscActivationRange = world.spigotConfig.miscActivationRange;
          final int raiderActivationRange = world.spigotConfig.raiderActivationRange;
          final int animalActivationRange = world.spigotConfig.animalActivationRange;
-@@ -143,7 +150,7 @@ public final class ActivationRange {
+@@ -142,7 +149,7 @@ public final class ActivationRange {
          maxRange = Math.min((world.spigotConfig.simulationDistance << 4) - 8, maxRange);
  
          for (final Player player : world.players()) {
@@ -31,7 +31,7 @@ index 76002854a338a447cae8c6b87345fdbdb666a194..2003f1aca9177ff0a0ea8ce76ee45509
              if (world.spigotConfig.ignoreSpectatorActivation && player.isSpectator()) {
                  continue;
              }
-@@ -165,7 +172,7 @@ public final class ActivationRange {
+@@ -164,7 +171,7 @@ public final class ActivationRange {
                      continue;
                  }
  
@@ -40,7 +40,7 @@ index 76002854a338a447cae8c6b87345fdbdb666a194..2003f1aca9177ff0a0ea8ce76ee45509
              }
          }
      }
-@@ -175,14 +182,14 @@ public final class ActivationRange {
+@@ -174,14 +181,14 @@ public final class ActivationRange {
       *
       * @param entity
       */

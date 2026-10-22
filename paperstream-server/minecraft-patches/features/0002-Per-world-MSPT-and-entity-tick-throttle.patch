@@ -5,10 +5,10 @@ Subject: [PATCH] Per world MSPT and entity tick throttle
 
 
 diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
-index 829f7685904fd741e00403647ae76d32275c34a3..76002854a338a447cae8c6b87345fdbdb666a194 100644
+index c18823746ab2edcab536cb1589b7720e3af07e0f..597780cc012425a2a6d2d24529dc4ac5e3c6e40b 100644
 --- a/io/papermc/paper/entity/activation/ActivationRange.java
 +++ b/io/papermc/paper/entity/activation/ActivationRange.java
-@@ -320,6 +320,11 @@ public final class ActivationRange {
+@@ -319,6 +319,11 @@ public final class ActivationRange {
              }
          }
          // removed the original's dumb tick skipping for active entities
@@ -21,40 +21,40 @@ index 829f7685904fd741e00403647ae76d32275c34a3..76002854a338a447cae8c6b87345fdbd
      }
  
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 68151ce05e7009f28dda0470c744920cbd5f4a27..292967a2e13917cd425c7e7897d9246328ec7c24 100755
+index ca2caace6aab0dfcb0ab7a0fd28e66555c62fdc5..8ae97dd764f7bad067e426b4cc4bbfa4e98ef76c 100755
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -1820,8 +1820,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
-             profiler.push(() -> level + " " + level.dimension().identifier());
-             profiler.push("tick");
+@@ -1815,8 +1815,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+ 
+             profilerFiller.push("tick");
  
 +            final long psTickStart = System.nanoTime(); // PaperStream - per world MSPT
              try {
-                 level.tick(haveTime);
-+                level.psTickTimes.record(System.nanoTime() - psTickStart); // PaperStream - per world MSPT
-             } catch (Throwable t) {
-                 CrashReport report = CrashReport.forThrowable(t, "Exception ticking world");
-                 level.fillReportDetails(report);
+                 serverLevel.tick(hasTimeLeft);
++                serverLevel.psTickTimes.record(System.nanoTime() - psTickStart); // PaperStream - per world MSPT
+             } catch (Throwable var7) {
+                 CrashReport crashReport = CrashReport.forThrowable(var7, "Exception ticking world");
+                 serverLevel.fillReportDetails(crashReport);
 diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
-index 02bd74f2ed7f34233e3543c8e70ae754adb8aa25..d3885233216c643c15a1d2e9129f6d4e04ce8015 100755
+index dc65503a2d785d64d37b76b0303f51cf66d9769a..c5f8d6af51ed1061b1eb6a4f2bac8fa46629554e 100755
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -183,6 +183,7 @@ import org.jspecify.annotations.Nullable;
+@@ -182,6 +182,7 @@ import org.jspecify.annotations.Nullable;
  import org.slf4j.Logger;
  
- public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGetter, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemLevelReader, ca.spottedleaf.moonrise.patches.chunk_tick_iteration.ChunkTickServerLevel { // Paper - rewrite chunk system // Paper - chunk tick iteration
+ public class ServerLevel extends Level implements ServerEntityGetter, WorldGenLevel, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemLevelReader, ca.spottedleaf.moonrise.patches.chunk_tick_iteration.ChunkTickServerLevel { // Paper - rewrite chunk system // Paper - chunk tick iteration
 +    public final net.paperstream.world.WorldTickTimes psTickTimes = new net.paperstream.world.WorldTickTimes(); // PaperStream - per world MSPT
      public static final BlockPos END_SPAWN_POINT = new BlockPos(100, 50, 0);
      public static final IntProvider RAIN_DELAY = UniformInt.of(12000, 180000);
      public static final IntProvider RAIN_DURATION = UniformInt.of(12000, 24000);
 diff --git a/net/minecraft/world/entity/Mob.java b/net/minecraft/world/entity/Mob.java
-index c2dd2da4bfb7d65ad2730ba1ce771e2b488beda4..8d189ef6efff95d8ea2d9c3238d49b4af4ae0b9e 100755
+index 92175cc019750e829fcad7691a937024c2649882..1600743282530b540a77e790f6d04de0670f10de 100755
 --- a/net/minecraft/world/entity/Mob.java
 +++ b/net/minecraft/world/entity/Mob.java
-@@ -105,6 +105,10 @@ import org.bukkit.event.entity.EntityUnleashEvent;
+@@ -101,6 +101,10 @@ import org.bukkit.event.entity.EntityUnleashEvent;
  // CraftBukkit end
  
- public abstract class Mob extends LivingEntity implements Targeting, EquipmentUser, Leashable {
+ public abstract class Mob extends LivingEntity implements EquipmentUser, Leashable, Targeting {
 +    // PaperStream start - entity tick throttle
 +    public int psThrottleInterval = 1;
 +    public int psThrottleRecheckTick;

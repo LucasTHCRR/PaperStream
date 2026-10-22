@@ -5,10 +5,10 @@ Subject: [PATCH] Config profiles: low, medium, performance and custom
 
 
 diff --git a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
-index 0d72440d019073ed2273625c9acb087db54abc96..96d53fdf259acf0e7043bbb4c99708cf830967ba 100755
+index 6a8da4bdb06f573cc6feb0924a158426763af358..f08d8c9adaf32aea3ebc5020c46d472430e1e8fe 100755
 --- a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
 +++ b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
-@@ -42,8 +42,8 @@ public final class MoonriseCommon {
+@@ -38,8 +38,8 @@ public final class MoonriseCommon {
      public static void adjustWorkerThreads(final int configWorkerThreads, final int configIoThreads) {
          // PaperStream start - use more of the CPU for chunk generation and loading
          // Paper uses a quarter of the cores. Leave two hardware threads for the main thread and netty, use the rest.
@@ -19,3 +19,16 @@ index 0d72440d019073ed2273625c9acb087db54abc96..96d53fdf259acf0e7043bbb4c99708cf
          // PaperStream end - use more of the CPU for chunk generation and loading
          defaultWorkerThreads = Integer.getInteger(PlatformHooks.get().getBrand() + ".WorkerThreadCount", Integer.valueOf(defaultWorkerThreads));
  
+diff --git a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+index 3fc1c4e174b4abb2f219654766ecb094658b2bdf..7f1485f2173c05da3393e1bd5886f9b92defcf4b 100755
+--- a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
++++ b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+@@ -564,7 +564,7 @@ public class CraftEventFactory {
+ 
+         EntityPlaceEvent event = new EntityPlaceEvent(entity.getBukkitEntity(), cplayer, clickedBlock, blockFace, CraftEquipmentSlot.getHand(hand));
+         // PaperStream start - stacked entity guard
+-        if (!net.paperstream.entity.EntityStackGuard.allowPlace(level, entity)) {
++        if (!net.paperstream.entity.EntityStackGuard.allowPlace(world, entity)) {
+             event.setCancelled(true);
+             if (cplayer != null && !net.paperstream.PaperStreamConfig.entityStackMessage.isEmpty()) {
+                 cplayer.sendActionBar(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(net.paperstream.PaperStreamConfig.entityStackMessage));

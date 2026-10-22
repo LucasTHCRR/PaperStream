@@ -6,10 +6,10 @@ Subject: [PATCH] Item piles: more than 64 dropped items in one block tick only
 
 
 diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
-index f41437f61c6bbe278620f3b8af1fd0d04874254b..eb728280bc0d51c1f869559603b2cec8cfdaa63c 100644
+index 45436d4183640b7ba5a24c1326a367bbe5602715..7806e928d1d58822150f98fad3705cc106e29bf4 100644
 --- a/io/papermc/paper/entity/activation/ActivationRange.java
 +++ b/io/papermc/paper/entity/activation/ActivationRange.java
-@@ -296,6 +296,11 @@ public final class ActivationRange {
+@@ -295,6 +295,11 @@ public final class ActivationRange {
       * @return
       */
      public static boolean checkIfActive(final Entity entity) {

@@ -5,10 +5,10 @@ Subject: [PATCH] Fewer worker threads on small machines
 
 
 diff --git a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
-index 6380125595fd55927dd69381bb987f4d1dd000fa..0d72440d019073ed2273625c9acb087db54abc96 100755
+index 88f1ac724af6c4f98235d5a528d85e6d42500a9b..6a8da4bdb06f573cc6feb0924a158426763af358 100755
 --- a/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
 +++ b/src/main/java/ca/spottedleaf/moonrise/common/util/MoonriseCommon.java
-@@ -42,7 +42,8 @@ public final class MoonriseCommon {
+@@ -38,7 +38,8 @@ public final class MoonriseCommon {
      public static void adjustWorkerThreads(final int configWorkerThreads, final int configIoThreads) {
          // PaperStream start - use more of the CPU for chunk generation and loading
          // Paper uses a quarter of the cores. Leave two hardware threads for the main thread and netty, use the rest.

@@ -4,7 +4,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.paperstream.PaperStreamConfig;
@@ -88,6 +88,6 @@ public final class EntityTickThrottle {
             return false;
         }
         final EntityType<?> type = mob.getType();
-        return type != EntityTypes.ENDER_DRAGON && type != EntityTypes.WITHER && type != EntityTypes.WARDEN;
+        return type != EntityType.ENDER_DRAGON && type != EntityType.WITHER && type != EntityType.WARDEN;
     }
 }

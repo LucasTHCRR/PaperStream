@@ -40,10 +40,10 @@ public final class FreshChunks {
 
     private static boolean playerNear(final LevelChunk chunk) {
         final int radius = PaperStreamConfig.freshChunksPlayerRadius;
-        final int cx = chunk.getPos().x();
-        final int cz = chunk.getPos().z();
+        final int cx = chunk.getPos().x;
+        final int cz = chunk.getPos().z;
         for (final ServerPlayer player : ((ServerLevel)chunk.getLevel()).players()) {
-            if (Math.abs(player.chunkPosition().x() - cx) <= radius && Math.abs(player.chunkPosition().z() - cz) <= radius) {
+            if (Math.abs(player.chunkPosition().x - cx) <= radius && Math.abs(player.chunkPosition().z - cz) <= radius) {
                 return true;
             }
         }

@@ -5,10 +5,10 @@ Subject: [PATCH] Villager throttle off near players and in iron farms
 
 
 diff --git a/net/minecraft/world/entity/npc/villager/Villager.java b/net/minecraft/world/entity/npc/villager/Villager.java
-index e7fc5c072901d0a2b9efb1b8619f1a73ca342bc3..91d12abc4a1e33c196a91134ecb0d86976b12ae7 100755
+index 98098db7415128ec1cd0ee1de8dc168f088fcfa2..d1cb36789ad807233e0a93164e9423b9bcde069f 100755
 --- a/net/minecraft/world/entity/npc/villager/Villager.java
 +++ b/net/minecraft/world/entity/npc/villager/Villager.java
-@@ -98,6 +98,8 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
+@@ -97,6 +97,8 @@ public class Villager extends AbstractVillager implements ReputationEventHandler
      // PaperStream start - villager brain throttle
      public long psLastBlockPos = Long.MIN_VALUE;
      public int psStillTicks;

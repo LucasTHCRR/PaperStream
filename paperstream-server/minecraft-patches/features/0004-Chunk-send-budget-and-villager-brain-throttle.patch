@@ -5,23 +5,22 @@ Subject: [PATCH] Chunk send budget and villager brain throttle
 
 
 diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
-index 0278444e09ea52de97ee4bcec24c6782e4dcbaed..04144daf262f1397471fd83a2cb7642c3b1e6833 100644
+index 64ced555998a993a38fe8bc9179d5d2b29be7a17..c1fb24d6206324a667310d8e68a8d5c6c835ab27 100644
 --- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 +++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
-@@ -850,6 +850,12 @@ public final class RegionizedPlayerChunkLoader {
-             final long maxSendsThisTick = this.chunkSendLimiter.takeAllocation(maxSends);
+@@ -833,6 +833,11 @@ public final class RegionizedPlayerChunkLoader {
+             final int maxSendsThisTick = Math.min((int)this.chunkSendLimiter.takeAllocation(time, sendRate, maxSends), this.sendQueue.size());
              // we do not return sends that we took from the allocation back because we want to limit the max send rate, not target it
-             for (long i = 0; i < maxSendsThisTick; ++i) {
+             for (int i = 0; i < maxSendsThisTick; ++i) {
 +                // PaperStream start - main thread time budget for chunk sending
 +                if (i > 0 && net.paperstream.chunk.ChunkSendBudget.exhausted()) {
-+                    this.chunkSendLimiter.returnUnused(maxSendsThisTick - i);
 +                    break;
 +                }
 +                // PaperStream end - main thread time budget for chunk sending
                  final long pendingSend = this.sendQueue.firstLong();
                  final int pendingSendX = CoordinateUtils.getChunkX(pendingSend);
                  final int pendingSendZ = CoordinateUtils.getChunkZ(pendingSend);
-@@ -869,7 +875,9 @@ public final class RegionizedPlayerChunkLoader {
+@@ -852,7 +857,9 @@ public final class RegionizedPlayerChunkLoader {
                  }
                  this.sendQueue.dequeueLong();
  
@@ -32,26 +31,26 @@ index 0278444e09ea52de97ee4bcec24c6782e4dcbaed..04144daf262f1397471fd83a2cb7642c
                  if (this.removed) {
                      // sendChunk may invoke plugin logic
 diff --git a/net/minecraft/world/entity/npc/villager/Villager.java b/net/minecraft/world/entity/npc/villager/Villager.java
-index 4f8439afa4ea602b662e68e6b86e9d927fb6a481..e7fc5c072901d0a2b9efb1b8619f1a73ca342bc3 100755
+index 89844d7e804cc8a2110b694e448bc5993991bea7..98098db7415128ec1cd0ee1de8dc168f088fcfa2 100755
 --- a/net/minecraft/world/entity/npc/villager/Villager.java
 +++ b/net/minecraft/world/entity/npc/villager/Villager.java
-@@ -95,6 +95,10 @@ import org.jspecify.annotations.Nullable;
+@@ -94,6 +94,10 @@ import org.jspecify.annotations.Nullable;
  import org.slf4j.Logger;
  
- public class Villager extends AbstractVillager implements VillagerDataHolder, ReputationEventHandler {
+ public class Villager extends AbstractVillager implements ReputationEventHandler, VillagerDataHolder {
 +    // PaperStream start - villager brain throttle
 +    public long psLastBlockPos = Long.MIN_VALUE;
 +    public int psStillTicks;
 +    // PaperStream end - villager brain throttle
      private static final Logger LOGGER = LogUtils.getLogger();
      private static final EntityDataAccessor<VillagerData> DATA_VILLAGER_DATA = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.VILLAGER_DATA);
-     private static final EntityDataAccessor<Boolean> DATA_VILLAGER_DATA_FINALIZED = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.BOOLEAN);
-@@ -263,7 +267,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
+     public static final int BREEDING_FOOD_THRESHOLD = 12;
+@@ -297,7 +301,7 @@ public class Villager extends AbstractVillager implements ReputationEventHandler
          // Paper end - EAR 2
-         ProfilerFiller profiler = Profiler.get();
-         profiler.push("villagerBrain");
+         ProfilerFiller profilerFiller = Profiler.get();
+         profilerFiller.push("villagerBrain");
 -        if (!inactive) this.getBrain().tick(level, this); // Paper - EAR 2
 +        if (!inactive && net.paperstream.entity.VillagerThrottle.shouldTickBrain(this)) this.getBrain().tick(level, this); // Paper - EAR 2 // PaperStream - villager brain throttle
-         profiler.pop();
+         profilerFiller.pop();
          if (this.assignProfessionWhenSpawned) {
              this.assignProfessionWhenSpawned = false;

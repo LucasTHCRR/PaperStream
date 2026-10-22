@@ -115,8 +115,8 @@ public final class PlayerChunkPrefetch {
         }
 
         final ChunkHolderManager holderManager = ((ChunkSystemServerLevel)world).moonrise$getChunkTaskScheduler().chunkHolderManager;
-        final int centerX = this.player.chunkPosition().x();
-        final int centerZ = this.player.chunkPosition().z();
+        final int centerX = this.player.chunkPosition().x;
+        final int centerZ = this.player.chunkPosition().z;
         final int lookahead = PaperStreamConfig.prefetchLookahead;
 
         // walk along the movement line, starting at the edge of the load view distance

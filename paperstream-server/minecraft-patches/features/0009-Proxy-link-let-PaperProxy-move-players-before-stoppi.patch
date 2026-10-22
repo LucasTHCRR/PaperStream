@@ -5,10 +5,10 @@ Subject: [PATCH] Proxy link: let PaperProxy move players before stopping
 
 
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 8c25d4eb7c02a60302dfdf20464b4696064927e1..41218a73d565fcc8d47e9cde48ed366734bece80 100755
+index 1e0139d97cd339dc5ec2b421c480eea95fe146d7..2fd82a92b920787c82adb42e0d1a678b4e1ae065 100755
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -1020,6 +1020,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1012,6 +1012,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
              this.cancelRecordingMetrics();
          }
  
