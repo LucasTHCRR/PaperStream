@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Fri, 23 Oct 2026 00:18:02 +0200
+Subject: [PATCH] bStats: report to service 34877 (PaperStream) instead of
+ Paper's name based reporting
+
+
+diff --git a/src/main/java/com/destroystokyo/paper/Metrics.java b/src/main/java/com/destroystokyo/paper/Metrics.java
+index 5b60f88261caf0306ab32c82faf784337d27aafe..15fc7db40b6a5e0ec16cde72cac0c7cafe8da4b7 100755
+--- a/src/main/java/com/destroystokyo/paper/Metrics.java
++++ b/src/main/java/com/destroystokyo/paper/Metrics.java
+@@ -562,6 +562,12 @@ public class Metrics {
+ 
+     public static class PaperMetrics {
+         public static void startMetrics() {
++            // PaperStream start - report to bStats service 34877 (PaperStream) instead of Paper's name based reporting
++            if (true) {
++                net.paperstream.PaperStreamMetrics.start();
++                return;
++            }
++            // PaperStream end - report to bStats service 34877
+             // Get the config file
+             File configFile = new File(new File((File) MinecraftServer.getServer().options.valueOf("plugins"), "bStats"), "config.yml");
+             YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
