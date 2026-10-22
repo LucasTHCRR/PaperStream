@@ -1,12 +1,14 @@
 # PaperStream
 
-A Paper fork for Minecraft 26.2 that uses less CPU, loads chunks faster and protects your server from lag machines.
+A Paper fork for Minecraft 26.2 and 1.21.11 that uses less CPU, loads chunks faster and protects your server from lag machines.
 
 **NOT OFFICIAL PAPER / not affiliated with PaperMC.** Please report problems to PaperStream, not to PaperMC: https://dc.gg/paperstream
 
 PaperStream is a drop-in replacement for Paper. Your worlds, plugins and configs keep working. Every change PaperStream makes has its own switch in `paperstream.yml`, so you can turn off anything you do not want.
 
-> Status: alpha. Only Minecraft 26.2 is built right now. Support for 1.21 up to 26.x is planned.
+> Status: alpha. Built for Minecraft 26.2 (branch `main`, Java 25) and 1.21.11 (branch `ver/1.21.11`, Java 21). More versions are planned.
+
+Documentation: [Wiki](https://github.com/LucasTHCRR/PaperStream/wiki)
 
 ## Features
 
