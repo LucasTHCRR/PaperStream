@@ -244,7 +244,7 @@ public final class PaperStreamConfig {
             "Share of the waiting chunks unloaded per tick when more are waiting. Paper: 0.05.");
 
         freshChunks = bool(yaml, "chunks.fresh-chunks.enabled", freshChunks,
-            "Chunks that were just loaded and have no player close by wait a moment before their block entities, leaf updates and mob spawning run. Mobs loaded from the world file follow the normal activation range right away instead of ticking fully for 10 seconds. Saves a lot while players fly through the world.");
+            "Chunks that were just loaded and have no player close by wait a moment before their block entities, leaf updates and mob spawning run. Mobs loaded from the world file follow the normal activation range right away instead of ticking fully for 10 seconds.");
         freshChunksWarmupTicks = integer(yaml, "chunks.fresh-chunks.warmup-seconds", freshChunksWarmupTicks / 20,
             "Seconds a freshly loaded chunk waits. A player coming close ends the wait at once.") * 20;
         freshChunksPlayerRadius = integer(yaml, "chunks.fresh-chunks.player-radius", freshChunksPlayerRadius,
