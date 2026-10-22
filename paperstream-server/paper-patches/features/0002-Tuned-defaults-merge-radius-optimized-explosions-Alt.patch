@@ -6,10 +6,10 @@ Subject: [PATCH] Tuned defaults: merge radius, optimized explosions, Alternate
 
 
 diff --git a/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java b/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
-index 86ae93a9cad3d165bbe0aec5babbe98dbf50d625..9d8913e614573e26b2139a8fff0194c749f0d4cb 100755
+index c710819bcd422f062a10127090ecfa6b222fe4f7..7b864f32fa8953478b3c335777c9e0675c56b4bb 100755
 --- a/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
 +++ b/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
-@@ -412,7 +412,7 @@ public class WorldConfiguration extends ConfigurationPart {
+@@ -414,7 +414,7 @@ public class WorldConfiguration extends ConfigurationPart {
      public class Environment extends ConfigurationPart {
          public boolean disableThunder = false;
          public boolean disableIceAndSnow = false;
@@ -18,7 +18,7 @@ index 86ae93a9cad3d165bbe0aec5babbe98dbf50d625..9d8913e614573e26b2139a8fff0194c7
          public boolean disableExplosionKnockback = false;
          public boolean generateFlatBedrock = false;
          public FrostedIce frostedIce;
-@@ -577,7 +577,7 @@ public class WorldConfiguration extends ConfigurationPart {
+@@ -581,7 +581,7 @@ public class WorldConfiguration extends ConfigurationPart {
      public class Misc extends ConfigurationPart {
          public boolean updatePathfindingOnBlockUpdate = true;
          public boolean showSignClickCommandFailureMsgsToPlayer = false;
@@ -28,7 +28,7 @@ index 86ae93a9cad3d165bbe0aec5babbe98dbf50d625..9d8913e614573e26b2139a8fff0194c7
          public boolean disableEndCredits = false;
          public DoubleOr.Default maxLeashDistance = DoubleOr.Default.USE_DEFAULT;
 diff --git a/src/main/java/org/spigotmc/SpigotWorldConfig.java b/src/main/java/org/spigotmc/SpigotWorldConfig.java
-index 339832e312578ee385bbf3c9d5c131435abe7d7a..8dabc71d0256ceab69e1a8d641ae662bb89f3e68 100755
+index 7ccb1f3f4a91aeb1295594a4645a74a9e9e697dc..07da28fea4102c2263404cdd5f77074c603b093e 100755
 --- a/src/main/java/org/spigotmc/SpigotWorldConfig.java
 +++ b/src/main/java/org/spigotmc/SpigotWorldConfig.java
 @@ -148,13 +148,13 @@ public class SpigotWorldConfig {
