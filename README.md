@@ -2,7 +2,7 @@
 
 A Paper fork for Minecraft 26.3, 26.2 and 1.21.11 that uses less CPU, loads chunks faster and protects your server from lag machines.
 
-**NOT OFFICIAL PAPER / not affiliated with PaperMC.** Please report problems to PaperStream, not to PaperMC: https://dc.gg/paperstream
+**NOT OFFICIAL PAPER / not affiliated with PaperMC.** Please report problems to PaperStream, not to PaperMC: https://dc.gg/paperstream or [support@paperstream.dev](mailto:support@paperstream.dev)
 
 PaperStream is a drop-in replacement for Paper. Your worlds, plugins and configs keep working. Every change PaperStream makes has its own switch in `paperstream.yml`, so you can turn off anything you do not want.
 
@@ -112,3 +112,5 @@ PaperStream's own code and patches are licensed under the GNU General Public Lic
 Made by LucasTHCR. Built on [Paper](https://papermc.io), with thanks to the PaperMC team and everyone behind Spigot and CraftBukkit.
 
 Discord: https://dc.gg/paperstream
+
+Support: [support@paperstream.dev](mailto:support@paperstream.dev)
