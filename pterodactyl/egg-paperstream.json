@@ -18,7 +18,7 @@
         "Java 21 (Minecraft 1.21.11)": "ghcr.io/pterodactyl/yolks:java_21"
     },
     "file_denylist": [],
-    "startup": "java -Xms128M -XX:MaxRAMPercentage=95.0 -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} --nogui",
+    "startup": "if [ \"{{AUTO_UPDATE}}\" = \"1\" ] && [ -f paperstream-update.sh ]; then sh paperstream-update.sh; fi; java -Xms128M -XX:MaxRAMPercentage={{MAX_RAM_PERCENT}} $( [ \"{{AIKAR_FLAGS}}\" = \"1\" ] && echo \"-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1\" ) {{JVM_ARGS}} -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} --nogui",
     "config": {
         "files": "{\n    \"server.properties\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"server-ip\": \"0.0.0.0\",\n            \"server-port\": \"{{server.build.default.port}}\",\n            \"query.port\": \"{{server.build.default.port}}\"\n        }\n    }\n}",
         "startup": "{\n    \"done\": \")! For help, type \"\n}",
@@ -27,7 +27,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/ash\r\n# PaperStream install script (Pterodactyl). Downloads the PaperStream server jar from GitHub releases.\r\napk add --no-cache curl jq >/dev/null\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server || exit 1\r\n\r\nAPI=\"https://api.github.com/repos/LucasTHCRR/PaperStream/releases?per_page=100\"\r\nRELEASES=/tmp/paperstream-releases.json\r\ncurl -fsSL \"${API}\" > \"${RELEASES}\" || { echo \"Could not reach GitHub.\"; exit 1; }\r\n\r\nif [ -z \"${PAPERSTREAM_BUILD}\" ] || [ \"${PAPERSTREAM_BUILD}\" = \"latest\" ]; then\r\n  # Newest release for the chosen Minecraft version, alpha builds included.\r\n  TAG=$(jq -r --arg mc \"${MINECRAFT_VERSION}\" '[.[] | select(.tag_name | startswith($mc + \"-\"))][0].tag_name // empty' \"${RELEASES}\")\r\nelse\r\n  TAG=\"${PAPERSTREAM_BUILD}\"\r\nfi\r\nif [ -z \"${TAG}\" ]; then\r\n  echo \"No PaperStream release found for Minecraft ${MINECRAFT_VERSION}. Available:\"\r\n  jq -r '.[].tag_name' \"${RELEASES}\"\r\n  exit 1\r\nfi\r\n\r\nURL=$(jq -r --arg tag \"${TAG}\" '.[] | select(.tag_name == $tag) | .assets[] | select(.name | test(\"^paperstream-.*\\\\.jar$\")) | .browser_download_url' \"${RELEASES}\" | head -n 1)\r\nif [ -z \"${URL}\" ]; then\r\n  echo \"Release ${TAG} has no PaperStream jar.\"\r\n  exit 1\r\nfi\r\n\r\necho \"Downloading PaperStream ${TAG}\"\r\ncurl -fL -o \"${SERVER_JARFILE}\" \"${URL}\" || exit 1\r\necho \"Installed ${SERVER_JARFILE} (${TAG})\"\r\n",
+            "script": "#!/bin/ash\r\n# PaperStream install script (Pterodactyl). Downloads the PaperStream server jar from GitHub releases.\r\napk add --no-cache curl jq >/dev/null\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server || exit 1\r\n\r\nAPI=\"https://api.github.com/repos/LucasTHCRR/PaperStream/releases?per_page=100\"\r\nRELEASES=/tmp/paperstream-releases.json\r\ncurl -fsSL \"${API}\" > \"${RELEASES}\" || { echo \"Could not reach GitHub.\"; exit 1; }\r\n\r\nif [ -z \"${PAPERSTREAM_BUILD}\" ] || [ \"${PAPERSTREAM_BUILD}\" = \"latest\" ]; then\r\n  # Newest release for the chosen Minecraft version, alpha builds included.\r\n  TAG=$(jq -r --arg mc \"${MINECRAFT_VERSION}\" '[.[] | select(.tag_name | startswith($mc + \"-\"))][0].tag_name // empty' \"${RELEASES}\")\r\nelse\r\n  TAG=\"${PAPERSTREAM_BUILD}\"\r\nfi\r\nif [ -z \"${TAG}\" ]; then\r\n  echo \"No PaperStream release found for Minecraft ${MINECRAFT_VERSION}. Available:\"\r\n  jq -r '.[].tag_name' \"${RELEASES}\"\r\n  exit 1\r\nfi\r\n\r\nURL=$(jq -r --arg tag \"${TAG}\" '.[] | select(.tag_name == $tag) | .assets[] | select(.name | test(\"^paperstream-.*\\\\.jar$\")) | .browser_download_url' \"${RELEASES}\" | head -n 1)\r\nif [ -z \"${URL}\" ]; then\r\n  echo \"Release ${TAG} has no PaperStream jar.\"\r\n  exit 1\r\nfi\r\n\r\necho \"Downloading PaperStream ${TAG}\"\r\ncurl -fL -o \"${SERVER_JARFILE}\" \"${URL}\" || exit 1\r\nbasename \"${URL}\" > .paperstream-installed\r\necho \"Installed ${SERVER_JARFILE} (${TAG})\"\r\n\r\n# The start command runs this before every start when \"Auto update\" is on.\r\ncat > paperstream-update.sh <<'UPDATE'\r\n#!/bin/sh\r\n# Written by the PaperStream egg. Runs before every start when \"Auto update\" is on:\r\n# installs the newest PaperStream build for this Minecraft version, unless a build is pinned.\r\nMC=\"${MINECRAFT_VERSION}\"\r\nJAR=\"${SERVER_JARFILE:-server.jar}\"\r\nif [ -n \"${PAPERSTREAM_BUILD}\" ] && [ \"${PAPERSTREAM_BUILD}\" != \"latest\" ]; then\r\n  exit 0\r\nfi\r\nJSON=$(curl -fsSL --max-time 15 \"https://api.github.com/repos/LucasTHCRR/PaperStream/releases?per_page=100\") || {\r\n  echo \"[PaperStream] Update check failed, starting the installed build.\"\r\n  exit 0\r\n}\r\nURL=$(printf '%s' \"${JSON}\" | grep -o \"\\\"browser_download_url\\\": *\\\"[^\\\"]*/paperstream-${MC}-[^\\\"]*\\.jar\\\"\" | head -n 1 | sed 's/.*\"\\(https[^\"]*\\)\"$/\\1/')\r\nif [ -z \"${URL}\" ]; then\r\n  echo \"[PaperStream] No build found for Minecraft ${MC}, starting the installed build.\"\r\n  exit 0\r\nfi\r\nNEW=$(basename \"${URL}\")\r\nOLD=$(cat .paperstream-installed 2>/dev/null)\r\nif [ \"${NEW}\" = \"${OLD}\" ] && [ -f \"${JAR}\" ]; then\r\n  echo \"[PaperStream] ${NEW} is up to date.\"\r\n  exit 0\r\nfi\r\necho \"[PaperStream] Updating ${OLD:-unknown} -> ${NEW}\"\r\nif curl -fsSL --max-time 300 -o \"${JAR}.download\" \"${URL}\"; then\r\n  mv \"${JAR}.download\" \"${JAR}\" && echo \"${NEW}\" > .paperstream-installed\r\nelse\r\n  rm -f \"${JAR}.download\"\r\n  echo \"[PaperStream] Download failed, starting the installed build.\"\r\nfi\r\nUPDATE\r\nchmod +x paperstream-update.sh\r\n",
             "container": "ghcr.io/pterodactyl/installers:alpine",
             "entrypoint": "ash"
         }
@@ -61,6 +61,46 @@
             "user_viewable": true,
             "user_editable": true,
             "rules": "required|regex:/^([\\w\\d._-]+)(\\.jar)$/",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto update",
+            "description": "1 = before every start, install the newest PaperStream build for the chosen Minecraft version (only while \"PaperStream build\" is latest). 0 = only on reinstall.",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Aikar flags",
+            "description": "1 = start Java with Aikar's tuned G1 garbage collector flags (recommended). 0 = plain Java defaults.",
+            "env_variable": "AIKAR_FLAGS",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Max RAM percent",
+            "description": "Share of the server's memory limit Java may use as heap. Keep some room for Java itself; 85-95 is usual.",
+            "env_variable": "MAX_RAM_PERCENT",
+            "default_value": "90.0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|between:25,98",
+            "field_type": "text"
+        },
+        {
+            "name": "Extra JVM arguments",
+            "description": "Added to the java command, e.g. -Dpaper.playerconnection.keepalive=60. Leave empty if unsure.",
+            "env_variable": "JVM_ARGS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:512",
             "field_type": "text"
         }
     ]
