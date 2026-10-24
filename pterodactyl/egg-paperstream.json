@@ -1,0 +1,67 @@
+{
+    "_comment": "PaperStream egg. NOT AN OFFICIAL PAPER PROJECT. https://github.com/LucasTHCRR/PaperStream",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": "https://raw.githubusercontent.com/LucasTHCRR/PaperStream/main/pterodactyl/egg-paperstream.json"
+    },
+    "exported_at": "2026-10-24T13:00:00+02:00",
+    "name": "PaperStream",
+    "author": "330454039+LucasTHCRR@users.noreply.github.com",
+    "description": "PaperStream: a Paper fork that uses less CPU and RAM, loads chunks faster and protects against lag machines and crash items. Every change can be switched off in paperstream.yml. Not an official Paper project. Made by LucasTHCR.",
+    "features": [
+        "eula",
+        "java_version",
+        "pid_limit"
+    ],
+    "docker_images": {
+        "Java 25 (Minecraft 26.x)": "ghcr.io/pterodactyl/yolks:java_25",
+        "Java 21 (Minecraft 1.21.11)": "ghcr.io/pterodactyl/yolks:java_21"
+    },
+    "file_denylist": [],
+    "startup": "java -Xms128M -XX:MaxRAMPercentage=95.0 -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} --nogui",
+    "config": {
+        "files": "{\n    \"server.properties\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"server-ip\": \"0.0.0.0\",\n            \"server-port\": \"{{server.build.default.port}}\",\n            \"query.port\": \"{{server.build.default.port}}\"\n        }\n    }\n}",
+        "startup": "{\n    \"done\": \")! For help, type \"\n}",
+        "logs": "{}",
+        "stop": "stop"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/ash\r\n# PaperStream install script (Pterodactyl). Downloads the PaperStream server jar from GitHub releases.\r\napk add --no-cache curl jq >/dev/null\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server || exit 1\r\n\r\nAPI=\"https://api.github.com/repos/LucasTHCRR/PaperStream/releases?per_page=100\"\r\nRELEASES=/tmp/paperstream-releases.json\r\ncurl -fsSL \"${API}\" > \"${RELEASES}\" || { echo \"Could not reach GitHub.\"; exit 1; }\r\n\r\nif [ -z \"${PAPERSTREAM_BUILD}\" ] || [ \"${PAPERSTREAM_BUILD}\" = \"latest\" ]; then\r\n  # Newest release for the chosen Minecraft version, alpha builds included.\r\n  TAG=$(jq -r --arg mc \"${MINECRAFT_VERSION}\" '[.[] | select(.tag_name | startswith($mc + \"-\"))][0].tag_name // empty' \"${RELEASES}\")\r\nelse\r\n  TAG=\"${PAPERSTREAM_BUILD}\"\r\nfi\r\nif [ -z \"${TAG}\" ]; then\r\n  echo \"No PaperStream release found for Minecraft ${MINECRAFT_VERSION}. Available:\"\r\n  jq -r '.[].tag_name' \"${RELEASES}\"\r\n  exit 1\r\nfi\r\n\r\nURL=$(jq -r --arg tag \"${TAG}\" '.[] | select(.tag_name == $tag) | .assets[] | select(.name | test(\"^paperstream-.*\\\\.jar$\")) | .browser_download_url' \"${RELEASES}\" | head -n 1)\r\nif [ -z \"${URL}\" ]; then\r\n  echo \"Release ${TAG} has no PaperStream jar.\"\r\n  exit 1\r\nfi\r\n\r\necho \"Downloading PaperStream ${TAG}\"\r\ncurl -fL -o \"${SERVER_JARFILE}\" \"${URL}\" || exit 1\r\necho \"Installed ${SERVER_JARFILE} (${TAG})\"\r\n",
+            "container": "ghcr.io/pterodactyl/installers:alpine",
+            "entrypoint": "ash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Minecraft version",
+            "description": "Minecraft version to install PaperStream for: 26.3, 26.2 or 1.21.11. For 1.21.11 pick the Java 21 image. Reinstall the server to change it.",
+            "env_variable": "MINECRAFT_VERSION",
+            "default_value": "26.3",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:26.3,26.2,1.21.11",
+            "field_type": "text"
+        },
+        {
+            "name": "PaperStream build",
+            "description": "Release tag to install, e.g. 26.3-alpha.2, or \"latest\" for the newest build of the chosen Minecraft version. Reinstall the server to update.",
+            "env_variable": "PAPERSTREAM_BUILD",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:40",
+            "field_type": "text"
+        },
+        {
+            "name": "Server jar file",
+            "description": "File name of the server jar.",
+            "env_variable": "SERVER_JARFILE",
+            "default_value": "server.jar",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|regex:/^([\\w\\d._-]+)(\\.jar)$/",
+            "field_type": "text"
+        }
+    ]
+}
