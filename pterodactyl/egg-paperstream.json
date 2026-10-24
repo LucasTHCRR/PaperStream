@@ -14,8 +14,8 @@
         "pid_limit"
     ],
     "docker_images": {
-        "Java 25 (Minecraft 26.x)": "ghcr.io/pterodactyl/yolks:java_25",
-        "Java 21 (Minecraft 1.21.11)": "ghcr.io/pterodactyl/yolks:java_21"
+        "Java 25": "ghcr.io/pterodactyl/yolks:java_25",
+        "Java 21": "ghcr.io/pterodactyl/yolks:java_21"
     },
     "file_denylist": [],
     "startup": "if [ \"{{AUTO_UPDATE}}\" = \"1\" ] && [ -f paperstream-update.sh ]; then sh paperstream-update.sh; fi; java -Xms128M -XX:MaxRAMPercentage={{MAX_RAM_PERCENT}} $( [ \"{{AIKAR_FLAGS}}\" = \"1\" ] && echo \"-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1\" ) {{JVM_ARGS}} -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} --nogui",
@@ -35,7 +35,7 @@
     "variables": [
         {
             "name": "Minecraft version",
-            "description": "Minecraft version to install PaperStream for: 26.3, 26.2 or 1.21.11. For 1.21.11 pick the Java 21 image. Reinstall the server to change it.",
+            "description": "Minecraft version to install PaperStream for: 26.3, 26.2 or 1.21.11. 26.x needs the Java 25 image, 1.21.11 the Java 21 image. Reinstall the server to change it.",
             "env_variable": "MINECRAFT_VERSION",
             "default_value": "26.3",
             "user_viewable": true,

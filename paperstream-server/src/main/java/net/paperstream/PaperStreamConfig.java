@@ -39,7 +39,7 @@ public final class PaperStreamConfig {
     public static int activationCheckInterval = 1;
 
     // entities.villager-brain-interval
-    public static int villagerBrainInterval = 20;
+    public static int villagerBrainInterval = 1;
 
     // entities.tick-throttle
     public static boolean entityThrottle = true;
@@ -82,6 +82,7 @@ public final class PaperStreamConfig {
     public static boolean itemPiles = true;
     public static int itemPilesMaxPerBlock = 64;
     public static int itemPilesInterval = 20;
+    public static int itemPilesSettleTicks = 100;
 
     // chunks.worker-priority, chunks.lag-generation-factor
     public static int workerNice = 5;
@@ -155,6 +156,18 @@ public final class PaperStreamConfig {
                     yaml.set(entry.getKey(), entry.getValue());
                 }
             }
+        }
+        // Die Villager-Drossel hat Trading Halls kaputt gemacht: alte Profilwerte (20, 40) einmalig auf aus, eigene Werte bleiben.
+        final java.util.List<String> fixes = new java.util.ArrayList<>(yaml.getStringList("config-fixes"));
+        if (!fixes.contains("villager-brain-off")) {
+            final int oldInterval = yaml.getInt("entities.villager-brain-interval", 1);
+            if (oldInterval == 20 || oldInterval == 40) {
+                yaml.set("entities.villager-brain-interval", 1);
+                LOGGER.info("entities.villager-brain-interval {} -> 1: the villager brain throttle is off by default now, it made villagers restock, take job sites and sleep unreliably", oldInterval);
+            }
+            fixes.add("villager-brain-off");
+            yaml.set("config-fixes", fixes);
+            yaml.setComments("config-fixes", java.util.List.of("Written by PaperStream, do not change."));
         }
         profile = chosen;
         yaml.set("profile-applied", chosen.id);
@@ -259,6 +272,8 @@ public final class PaperStreamConfig {
             "Dropped items in one block up to which everything ticks normally.");
         itemPilesInterval = integer(yaml, "entities.item-piles.tick-interval", itemPilesInterval,
             "Items in a bigger pile tick only every this many ticks (20 = once per second).");
+        itemPilesSettleTicks = integer(yaml, "entities.item-piles.settle-ticks", itemPilesSettleTicks,
+            "Freshly dropped items always tick normally for this many ticks (100 = 5 seconds), so they fall, slide and stack like in vanilla. Only what is still lying in a big pile afterwards is slowed down.");
 
         entityStackGuard = bool(yaml, "entities.stack-guard.enabled", entityStackGuard,
             "Refuse placing armor stands, minecarts or boats once too many are in one spot (lag machines). Existing ones stay, plugins and commands are never limited.");
@@ -292,7 +307,7 @@ public final class PaperStreamConfig {
         activationCheckInterval = integer(yaml, "entities.activation-check-interval", activationCheckInterval,
             "Check which entities are near a player (entity activation range) only every this many ticks. 1 = every tick like Paper.");
         villagerBrainInterval = integer(yaml, "entities.villager-brain-interval", villagerBrainInterval,
-            "Villagers that have not moved for 10 seconds run their AI only every this many ticks. Trading villagers are never throttled. 1 = off.");
+            "1 = off (default). Villagers that have not moved for 10 seconds run their AI only every this many ticks. Saves CPU in big trading halls, but villagers then restock, take job sites and go to bed unreliably.");
 
         entityThrottle = bool(yaml, "entities.tick-throttle.enabled", entityThrottle,
             "Idle mobs far from every player tick less often. Fighting, riding, leashed, hurt or falling mobs are never throttled.");
