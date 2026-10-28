@@ -70,6 +70,18 @@ public final class PaperStreamConfig {
     // world.explosions
     public static int explosionsPerChunk = 32;
 
+    // memory
+    public static boolean memoryBrake = true;
+    public static int memoryBrakePercent = 85;
+    public static boolean memoryReleaseEmpty = true;
+    public static int memoryReleaseAfterSeconds = 300;
+
+    // items.guard
+    public static boolean itemGuard = true;
+    public static int itemGuardMaxSizeKb = 64;
+    public static int itemGuardMaxNesting = 3;
+    public static boolean itemGuardNotify = true;
+
     // world.redstone-clocks
     public static boolean redstoneGuard = true;
     public static int redstoneMaxPerSecond = 400;
@@ -229,6 +241,24 @@ public final class PaperStreamConfig {
 
         explosionsPerChunk = integer(yaml, "world.explosions.max-per-chunk-per-tick", explosionsPerChunk,
             "Explosions beyond this in one chunk and tick are dropped (TNT cannons, creeper farms). 0 = no limit.");
+
+        memoryBrake = bool(yaml, "memory.unload-brake.enabled", memoryBrake,
+            "While the heap is nearly full, chunks players left are unloaded right away and faster, instead of being kept for chunks.unload.delay-seconds.");
+        memoryBrakePercent = integer(yaml, "memory.unload-brake.heap-percent", memoryBrakePercent,
+            "Live heap (what is still used after a garbage collection) in percent of -Xmx from which the brake starts. It stops 10 points below.");
+        memoryReleaseEmpty = bool(yaml, "memory.release-when-empty.enabled", memoryReleaseEmpty,
+            "When nobody is online, clean up the heap once so Java can give unused memory back to the system and the panel shows less RAM. Only works when -Xms is lower than -Xmx.");
+        memoryReleaseAfterSeconds = integer(yaml, "memory.release-when-empty.after-seconds", memoryReleaseAfterSeconds,
+            "How long the server has to be empty first.");
+
+        itemGuard = bool(yaml, "items.guard.enabled", itemGuard,
+            "Refuse creative inventory items that carry huge amounts of data (\"server killer\" chests full of filled shulkers). Survival players cannot build such items.");
+        itemGuardMaxSizeKb = integer(yaml, "items.guard.max-size-kb", itemGuardMaxSizeKb,
+            "Largest item data in KB a creative item may carry. A full shulker of named, enchanted items stays far below.");
+        itemGuardMaxNesting = integer(yaml, "items.guard.max-nesting", itemGuardMaxNesting,
+            "How deep filled containers may be nested in one item. 1 = shulker with items, 2 = bundle in a shulker, 3 = bundle in a bundle in a shulker.");
+        itemGuardNotify = bool(yaml, "items.guard.notify", itemGuardNotify,
+            "Tell players with the permission paperstream.notify.items when an item was refused.");
 
         redstoneGuard = bool(yaml, "world.redstone-clocks.enabled", redstoneGuard,
             "Slow down redstone clocks that run far faster than any farm (lag machines). Nothing gets broken, the chunk only gets fewer redstone updates.");
