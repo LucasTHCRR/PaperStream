@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 12:10:41 +0200
+Subject: [PATCH] Memory: unload brake when the live heap is nearly full
+
+
+diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
+index a1f84d24d20cb96c665af8581902bc0c03015673..69cb60ff86c57517f32181406950672d10a12823 100755
+--- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
++++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
+@@ -210,13 +210,15 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
+     @Override
+     public int configMinChunkUnloadCount(final ServerLevel world) {
+         // PaperStream - configurable unload rate: a value from paperstream.yml other than Paper's default wins over paper-world-defaults.yml
+-        return net.paperstream.PaperStreamConfig.unloadMinPerTick != 50 ? net.paperstream.PaperStreamConfig.unloadMinPerTick : world.paperConfig().chunks.minChunkUnloadCount;
++        final int count = net.paperstream.PaperStreamConfig.unloadMinPerTick != 50 ? net.paperstream.PaperStreamConfig.unloadMinPerTick : world.paperConfig().chunks.minChunkUnloadCount;
++        return net.paperstream.world.MemoryGuard.isBraking() ? Math.max(count, 200) : count; // PaperStream - unload brake
+     }
+ 
+     @Override
+     public double configMinChunkUnloadFraction(final ServerLevel world) {
+         // PaperStream - configurable unload rate: a value from paperstream.yml other than Paper's default wins over paper-world-defaults.yml
+-        return net.paperstream.PaperStreamConfig.unloadFractionPerTick != 0.05D ? net.paperstream.PaperStreamConfig.unloadFractionPerTick : world.paperConfig().chunks.minChunkUnloadFraction;
++        final double fraction = net.paperstream.PaperStreamConfig.unloadFractionPerTick != 0.05D ? net.paperstream.PaperStreamConfig.unloadFractionPerTick : world.paperConfig().chunks.minChunkUnloadFraction;
++        return net.paperstream.world.MemoryGuard.isBraking() ? Math.max(fraction, 0.2D) : fraction; // PaperStream - unload brake
+     }
+ 
+     @Override
+diff --git a/io/papermc/paper/FeatureHooks.java b/io/papermc/paper/FeatureHooks.java
+index 260c220f39e04d19ac38dffee28684d3be791c1c..25de37128ca1152326a9c571a2073a56543838b0 100755
+--- a/io/papermc/paper/FeatureHooks.java
++++ b/io/papermc/paper/FeatureHooks.java
+@@ -47,7 +47,8 @@ public final class FeatureHooks {
+ 
+     public static void applyPlayerChunkUnloadDelay() {
+         final int own = net.paperstream.PaperStreamConfig.unloadDelayTicks;
+-        ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.setUnloadDelay(own >= 0 ? own : psPaperUnloadDelay); // Paper - rewrite chunk system
++        final long delay = net.paperstream.world.MemoryGuard.isBraking() ? 0L : (own >= 0 ? own : psPaperUnloadDelay); // PaperStream - unload brake
++        ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.setUnloadDelay(delay); // Paper - rewrite chunk system
+     }
+     // PaperStream end - unload delay from paperstream.yml
+ 

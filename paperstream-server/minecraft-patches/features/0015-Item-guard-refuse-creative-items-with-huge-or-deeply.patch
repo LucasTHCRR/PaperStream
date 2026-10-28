@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 11:39:32 +0200
+Subject: [PATCH] Item guard: refuse creative items with huge or deeply nested
+ container data
+
+
+diff --git a/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index 8178922f5ecc7f6709335c7fbeb6dca505b044bb..45b290d5374b0ad172c0d6def2029ab7326b27aa 100755
+--- a/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -3543,6 +3543,14 @@ public class ServerGamePacketListenerImpl
+             if (!itemStack.isItemEnabled(this.player.level().enabledFeatures())) {
+                 return;
+             }
++            // PaperStream start - refuse server killer items (containers stuffed into containers)
++            if (!net.paperstream.world.ItemGuard.allowCreative(this.player, itemStack)) {
++                if (packet.slotNum() >= 0) {
++                    this.player.connection.send(new net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket(this.player.inventoryMenu.containerId, this.player.inventoryMenu.incrementStateId(), packet.slotNum(), this.player.inventoryMenu.getSlot(packet.slotNum()).getItem()));
++                }
++                return;
++            }
++            // PaperStream end - refuse server killer items
+ 
+             boolean validSlot = packet.slotNum() >= 1 && packet.slotNum() <= 45;
+             boolean validData = itemStack.isEmpty() || itemStack.getCount() <= itemStack.getMaxStackSize();

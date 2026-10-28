@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucasthcr@paperstream.dev>
+Date: Sat, 24 Oct 2026 19:14:10 +0200
+Subject: [PATCH] Let the tripwire hook setting skip the 26.x hook check too
+
+
+diff --git a/net/minecraft/world/level/block/TripWireHookBlock.java b/net/minecraft/world/level/block/TripWireHookBlock.java
+index b9090b80f9489431b11da29acf1f499e94c022ea..f520e788075460a131f0c959d42ff6268d26e396 100755
+--- a/net/minecraft/world/level/block/TripWireHookBlock.java
++++ b/net/minecraft/world/level/block/TripWireHookBlock.java
+@@ -163,7 +163,8 @@ public class TripWireHookBlock extends Block {
+                 Direction opposite = direction.getOpposite();
+                 level.setBlockAndUpdate(testPos, newState.setValue(FACING, opposite));
+                 notifyNeighbors(block, level, testPos, opposite);
+-                if (!level.getBlockState(pos).is(Blocks.TRIPWIRE_HOOK)) {
++                // PaperStream - mit skip-tripwire-hook-placement-validation auch Mojangs 26.x-Prüfung auslassen, sonst geht der Hook-Dupe nicht
++                if (!io.papermc.paper.configuration.GlobalConfiguration.get().unsupportedSettings.skipTripwireHookPlacementValidation && !level.getBlockState(pos).is(Blocks.TRIPWIRE_HOOK)) {
+                     onRemoved(newState, level, pos);
+                     return;
+                 }
