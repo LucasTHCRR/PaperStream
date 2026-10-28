@@ -111,6 +111,10 @@ public final class WorldLimits {
         if (this.itemsLastTick.get(key) <= PaperStreamConfig.itemPilesMaxPerBlock) {
             return false;
         }
+        // Frische Drops fallen und stapeln sich erst wie in Vanilla, gedrosselt wird nur, was danach noch als Haufen liegt.
+        if (item.getAge() < PaperStreamConfig.itemPilesSettleTicks) {
+            return false;
+        }
         if ((item.getId() + now) % PaperStreamConfig.itemPilesInterval == 0) {
             return false;
         }

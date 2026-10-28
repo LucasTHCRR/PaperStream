@@ -39,7 +39,7 @@ public final class PaperStreamConfig {
     public static int activationCheckInterval = 1;
 
     // entities.villager-brain-interval
-    public static int villagerBrainInterval = 20;
+    public static int villagerBrainInterval = 1;
 
     // entities.tick-throttle
     public static boolean entityThrottle = true;
@@ -70,6 +70,18 @@ public final class PaperStreamConfig {
     // world.explosions
     public static int explosionsPerChunk = 32;
 
+    // memory
+    public static boolean memoryBrake = true;
+    public static int memoryBrakePercent = 85;
+    public static boolean memoryReleaseEmpty = true;
+    public static int memoryReleaseAfterSeconds = 300;
+
+    // items.guard
+    public static boolean itemGuard = true;
+    public static int itemGuardMaxSizeKb = 64;
+    public static int itemGuardMaxNesting = 3;
+    public static boolean itemGuardNotify = true;
+
     // world.redstone-clocks
     public static boolean redstoneGuard = true;
     public static int redstoneMaxPerSecond = 400;
@@ -82,6 +94,7 @@ public final class PaperStreamConfig {
     public static boolean itemPiles = true;
     public static int itemPilesMaxPerBlock = 64;
     public static int itemPilesInterval = 20;
+    public static int itemPilesSettleTicks = 100;
 
     // chunks.worker-priority, chunks.lag-generation-factor
     public static int workerNice = 5;
@@ -156,6 +169,18 @@ public final class PaperStreamConfig {
                 }
             }
         }
+        // Die Villager-Drossel hat Trading Halls kaputt gemacht: alte Profilwerte (20, 40) einmalig auf aus, eigene Werte bleiben.
+        final java.util.List<String> fixes = new java.util.ArrayList<>(yaml.getStringList("config-fixes"));
+        if (!fixes.contains("villager-brain-off")) {
+            final int oldInterval = yaml.getInt("entities.villager-brain-interval", 1);
+            if (oldInterval == 20 || oldInterval == 40) {
+                yaml.set("entities.villager-brain-interval", 1);
+                LOGGER.info("entities.villager-brain-interval {} -> 1: the villager brain throttle is off by default now, it made villagers restock, take job sites and sleep unreliably", oldInterval);
+            }
+            fixes.add("villager-brain-off");
+            yaml.set("config-fixes", fixes);
+            yaml.setComments("config-fixes", java.util.List.of("Written by PaperStream, do not change."));
+        }
         profile = chosen;
         yaml.set("profile-applied", chosen.id);
         yaml.setComments("profile", java.util.List.of(
@@ -217,6 +242,24 @@ public final class PaperStreamConfig {
         explosionsPerChunk = integer(yaml, "world.explosions.max-per-chunk-per-tick", explosionsPerChunk,
             "Explosions beyond this in one chunk and tick are dropped (TNT cannons, creeper farms). 0 = no limit.");
 
+        memoryBrake = bool(yaml, "memory.unload-brake.enabled", memoryBrake,
+            "While the heap is nearly full, chunks players left are unloaded right away and faster, instead of being kept for chunks.unload.delay-seconds.");
+        memoryBrakePercent = integer(yaml, "memory.unload-brake.heap-percent", memoryBrakePercent,
+            "Live heap (what is still used after a garbage collection) in percent of -Xmx from which the brake starts. It stops 10 points below.");
+        memoryReleaseEmpty = bool(yaml, "memory.release-when-empty.enabled", memoryReleaseEmpty,
+            "When nobody is online, clean up the heap once so Java can give unused memory back to the system and the panel shows less RAM. Only works when -Xms is lower than -Xmx.");
+        memoryReleaseAfterSeconds = integer(yaml, "memory.release-when-empty.after-seconds", memoryReleaseAfterSeconds,
+            "How long the server has to be empty first.");
+
+        itemGuard = bool(yaml, "items.guard.enabled", itemGuard,
+            "Refuse creative inventory items that carry huge amounts of data (\"server killer\" chests full of filled shulkers). Survival players cannot build such items.");
+        itemGuardMaxSizeKb = integer(yaml, "items.guard.max-size-kb", itemGuardMaxSizeKb,
+            "Largest item data in KB a creative item may carry. A full shulker of named, enchanted items stays far below.");
+        itemGuardMaxNesting = integer(yaml, "items.guard.max-nesting", itemGuardMaxNesting,
+            "How deep filled containers may be nested in one item. 1 = shulker with items, 2 = bundle in a shulker, 3 = bundle in a bundle in a shulker.");
+        itemGuardNotify = bool(yaml, "items.guard.notify", itemGuardNotify,
+            "Tell players with the permission paperstream.notify.items when an item was refused.");
+
         redstoneGuard = bool(yaml, "world.redstone-clocks.enabled", redstoneGuard,
             "Slow down redstone clocks that run far faster than any farm (lag machines). Nothing gets broken, the chunk only gets fewer redstone updates.");
         redstoneMaxPerSecond = integer(yaml, "world.redstone-clocks.max-per-second", redstoneMaxPerSecond,
@@ -259,6 +302,8 @@ public final class PaperStreamConfig {
             "Dropped items in one block up to which everything ticks normally.");
         itemPilesInterval = integer(yaml, "entities.item-piles.tick-interval", itemPilesInterval,
             "Items in a bigger pile tick only every this many ticks (20 = once per second).");
+        itemPilesSettleTicks = integer(yaml, "entities.item-piles.settle-ticks", itemPilesSettleTicks,
+            "Freshly dropped items always tick normally for this many ticks (100 = 5 seconds), so they fall, slide and stack like in vanilla. Only what is still lying in a big pile afterwards is slowed down.");
 
         entityStackGuard = bool(yaml, "entities.stack-guard.enabled", entityStackGuard,
             "Refuse placing armor stands, minecarts or boats once too many are in one spot (lag machines). Existing ones stay, plugins and commands are never limited.");
@@ -292,7 +337,7 @@ public final class PaperStreamConfig {
         activationCheckInterval = integer(yaml, "entities.activation-check-interval", activationCheckInterval,
             "Check which entities are near a player (entity activation range) only every this many ticks. 1 = every tick like Paper.");
         villagerBrainInterval = integer(yaml, "entities.villager-brain-interval", villagerBrainInterval,
-            "Villagers that have not moved for 10 seconds run their AI only every this many ticks. Trading villagers are never throttled. 1 = off.");
+            "1 = off (default). Villagers that have not moved for 10 seconds run their AI only every this many ticks. Saves CPU in big trading halls, but villagers then restock, take job sites and go to bed unreliably.");
 
         entityThrottle = bool(yaml, "entities.tick-throttle.enabled", entityThrottle,
             "Idle mobs far from every player tick less often. Fighting, riding, leashed, hurt or falling mobs are never throttled.");

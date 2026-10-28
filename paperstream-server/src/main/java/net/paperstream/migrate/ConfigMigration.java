@@ -46,8 +46,6 @@ public final class ConfigMigration {
         list.add(new Recommendation(WORLD, "collisions.max-entity-collisions", 2, "piles of mobs or minecarts cost less, cramming still works", Compare.AT_MOST));
         list.add(new Recommendation(WORLD, "collisions.fix-climbing-bypassing-cramming-rule", true, "closes a cramming bypass used by lag machines"));
         list.add(new Recommendation(WORLD, "entities.armor-stands.do-collision-entity-lookups", false, "armor stands stop searching for collisions"));
-        list.add(new Recommendation(WORLD, "tick-rates.behavior.villager.validatenearbypoi", 60, "villagers check their workstation less often", Compare.AT_LEAST));
-        list.add(new Recommendation(WORLD, "tick-rates.behavior.villager.acquirepoi", 120, "villagers look for a job less often", Compare.AT_LEAST));
         final Map<String, Integer> saveLimits = new LinkedHashMap<>();
         saveLimits.put("area_effect_cloud", 8);
         saveLimits.put("arrow", 16);

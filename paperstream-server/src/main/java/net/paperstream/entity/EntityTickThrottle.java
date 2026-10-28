@@ -81,10 +81,8 @@ public final class EntityTickThrottle {
         if (!mob.onGround() || mob.isInWater() || mob.isInLava()) {
             return false;
         }
-        // villagers in danger must be able to flee every tick
-        if (mob instanceof net.minecraft.world.entity.npc.villager.Villager villager
-            && (villager.getBrain().hasMemoryValue(net.minecraft.world.entity.ai.memory.MemoryModuleType.NEAREST_HOSTILE)
-                || villager.level().isDarkOutside())) {
+        // Villager nie drosseln: Auffüllen, Jobblock und Bett hängen am genauen Timing ihres Gehirns.
+        if (mob instanceof net.minecraft.world.entity.npc.villager.Villager) {
             return false;
         }
         final EntityType<?> type = mob.getType();

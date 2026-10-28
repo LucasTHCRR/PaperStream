@@ -50,7 +50,7 @@ public enum ConfigProfile {
         v.put("entities.tick-throttle.far-distance", 56.0D);
         v.put("entities.tick-throttle.lag-mspt", 40.0D);
         v.put("entities.pathfinding.max-per-tick", 80);
-        v.put("entities.villager-brain-interval", 20);
+        v.put("entities.villager-brain-interval", 1);
         v.put("entities.activation-check-interval", 1);
         v.put("world.lag-protection.mspt", 45.0D);
         v.put("world.explosions.max-per-chunk-per-tick", 32);
@@ -70,7 +70,6 @@ public enum ConfigProfile {
                 v.put("entities.tick-throttle.near-distance", 48.0D);
                 v.put("entities.tick-throttle.far-distance", 80.0D);
                 v.put("entities.pathfinding.max-per-tick", 160);
-                v.put("entities.villager-brain-interval", 1);
                 v.put("world.lag-protection.mspt", 50.0D);
                 v.put("world.explosions.max-per-chunk-per-tick", 64);
                 v.put("world.redstone-clocks.max-per-second", 600);
@@ -88,7 +87,6 @@ public enum ConfigProfile {
                 v.put("entities.tick-throttle.far-distance", 40.0D);
                 v.put("entities.tick-throttle.lag-mspt", 30.0D);
                 v.put("entities.pathfinding.max-per-tick", 40);
-                v.put("entities.villager-brain-interval", 40);
                 v.put("entities.activation-check-interval", 2);
                 v.put("world.lag-protection.mspt", 35.0D);
                 v.put("world.explosions.max-per-chunk-per-tick", 16);
