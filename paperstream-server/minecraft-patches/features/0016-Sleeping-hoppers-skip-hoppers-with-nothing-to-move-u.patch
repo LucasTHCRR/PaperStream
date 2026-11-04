@@ -1,0 +1,115 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Wed, 4 Nov 2026 07:08:49 +0100
+Subject: [PATCH] Sleeping hoppers: skip hoppers with nothing to move until
+ something nearby changes
+
+
+diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
+index 255371970792603a464a961ec697476a69c048d0..c3b577f89d226021d2fcaffa459c699661e0e65e 100755
+--- a/net/minecraft/world/entity/Entity.java
++++ b/net/minecraft/world/entity/Entity.java
+@@ -5043,6 +5043,9 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+             if (floor != this.blockPosition.getX() || floor1 != this.blockPosition.getY() || floor2 != this.blockPosition.getZ()) {
+                 this.blockPosition = new BlockPos(floor, floor1, floor2);
+                 this.inBlockState = null;
++                if ((this instanceof net.minecraft.world.entity.item.ItemEntity || this instanceof net.minecraft.world.entity.vehicle.ContainerEntity) && net.paperstream.world.HopperSleep.enabled()) {
++                    net.paperstream.world.HopperSleep.entityMoved(this.level, this.blockPosition); // PaperStream - Hopper wecken
++                }
+                 if (SectionPos.blockToSectionCoord(floor) != this.chunkPosition.x || SectionPos.blockToSectionCoord(floor2) != this.chunkPosition.z) {
+                     this.chunkPosition = new ChunkPos(this.blockPosition);
+                 }
+diff --git a/net/minecraft/world/entity/vehicle/boat/AbstractChestBoat.java b/net/minecraft/world/entity/vehicle/boat/AbstractChestBoat.java
+index d9aaaccd36dd3cd2a40a5c7f06bff192f1434333..d4dff8e8de0fe33f76e104ace1d419a2d28a794f 100755
+--- a/net/minecraft/world/entity/vehicle/boat/AbstractChestBoat.java
++++ b/net/minecraft/world/entity/vehicle/boat/AbstractChestBoat.java
+@@ -139,6 +139,7 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
+ 
+     @Override
+     public void setChanged() {
++        net.paperstream.world.HopperSleep.entityMoved(this.level(), this.blockPosition()); // PaperStream - Hopper wecken
+     }
+ 
+     @Override
+diff --git a/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java b/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java
+index 79541b56a07d10de450f63945d0849a7f320da6c..60c042fd1ffe58b352db328727dca2ebec213b10 100755
+--- a/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java
++++ b/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java
+@@ -65,6 +65,7 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
+ 
+     @Override
+     public void setChanged() {
++        net.paperstream.world.HopperSleep.entityMoved(this.level(), this.blockPosition()); // PaperStream - Hopper wecken
+     }
+ 
+     @Override
+diff --git a/net/minecraft/world/level/block/HopperBlock.java b/net/minecraft/world/level/block/HopperBlock.java
+index 6789dd6c6f9c1683bcf0abb20319ccd6775e613c..871d69f7629c67c9acd00720459bf13f4adba38f 100755
+--- a/net/minecraft/world/level/block/HopperBlock.java
++++ b/net/minecraft/world/level/block/HopperBlock.java
+@@ -111,6 +111,7 @@ public class HopperBlock extends BaseEntityBlock {
+ 
+     @Override
+     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, @Nullable Orientation orientation, boolean movedByPiston) {
++        net.paperstream.world.HopperSleep.blockEntityChanged(level, pos); // PaperStream - Hopper wecken
+         this.checkPoweredState(level, pos, state);
+     }
+ 
+diff --git a/net/minecraft/world/level/block/entity/BlockEntity.java b/net/minecraft/world/level/block/entity/BlockEntity.java
+index fb22ebe9758014ebf2aebcda21155f1c4c83fafe..b29d820e7fc3c9a152ba62280beae44adeda3b2e 100755
+--- a/net/minecraft/world/level/block/entity/BlockEntity.java
++++ b/net/minecraft/world/level/block/entity/BlockEntity.java
+@@ -234,6 +234,7 @@ public abstract class BlockEntity implements DebugValueSource {
+ 
+     protected static void setChanged(Level level, BlockPos pos, BlockState state) {
+         level.blockEntityChanged(pos);
++        net.paperstream.world.HopperSleep.blockEntityChanged(level, pos); // PaperStream - Hopper wecken
+         if (!state.isAir()) {
+             level.updateNeighbourForOutputSignal(pos, state.getBlock());
+         }
+diff --git a/net/minecraft/world/level/block/entity/HopperBlockEntity.java b/net/minecraft/world/level/block/entity/HopperBlockEntity.java
+index 12f8105d6b12c5d63cb6e5e79435c7fd22655475..7dded4a25e3e0bf9f8acea63198abfbc63d61827 100755
+--- a/net/minecraft/world/level/block/entity/HopperBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/HopperBlockEntity.java
+@@ -36,6 +36,7 @@ public class HopperBlockEntity extends RandomizableContainerBlockEntity implemen
+     private static final Component DEFAULT_NAME = Component.translatable("container.hopper");
+     private NonNullList<ItemStack> items = NonNullList.withSize(5, ItemStack.EMPTY);
+     public int cooldownTime = -1;
++    public long paperstreamSleepUntil; // PaperStream - schlafender Hopper
+     private long tickedGameTime;
+     private Direction facing;
+ 
+@@ -106,12 +107,14 @@ public class HopperBlockEntity extends RandomizableContainerBlockEntity implemen
+ 
+     @Override
+     public ItemStack removeItem(int index, int count) {
++        this.paperstreamSleepUntil = 0L; // PaperStream
+         this.unpackLootTable(null);
+         return ContainerHelper.removeItem(this.getItems(), index, count);
+     }
+ 
+     @Override
+     public void setItem(int index, ItemStack stack) {
++        this.paperstreamSleepUntil = 0L; // PaperStream
+         this.unpackLootTable(null);
+         this.getItems().set(index, stack);
+         stack.limitSize(this.getMaxStackSize(stack));
+@@ -131,12 +134,18 @@ public class HopperBlockEntity extends RandomizableContainerBlockEntity implemen
+     public static void pushItemsTick(Level level, BlockPos pos, BlockState state, HopperBlockEntity blockEntity) {
+         blockEntity.cooldownTime--;
+         blockEntity.tickedGameTime = level.getGameTime();
++        if (blockEntity.paperstreamSleepUntil > blockEntity.tickedGameTime) {
++            return; // PaperStream - schlafender Hopper
++        }
+         if (!blockEntity.isOnCooldown()) {
+             blockEntity.setCooldown(0);
+             // Spigot start
+             boolean result = tryMoveItems(level, pos, state, blockEntity, () -> {
+                 return suckInItems(level, blockEntity);
+             });
++            if (!result) {
++                net.paperstream.world.HopperSleep.sleep(blockEntity, blockEntity.tickedGameTime); // PaperStream
++            }
+             if (!result && blockEntity.level.spigotConfig.hopperCheck > 1) {
+                 blockEntity.setCooldown(blockEntity.level.spigotConfig.hopperCheck);
+             }

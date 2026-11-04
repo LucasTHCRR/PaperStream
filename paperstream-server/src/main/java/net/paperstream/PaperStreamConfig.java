@@ -119,6 +119,14 @@ public final class PaperStreamConfig {
     public static int entityStackPerChunk = 96;
     public static String entityStackMessage = "<red>Too many of these in one spot.";
 
+    // beta.sleeping-hoppers
+    public static boolean sleepingHoppers = false;
+    public static int sleepingHoppersMaxTicks = 20;
+
+    // beta.skip-unchanged-chunk-saves
+    public static boolean skipUnchangedChunkSaves = false;
+
+
     // world.idle
     public static boolean idleMode = true;
     public static int idleAfterSeconds = 60;
@@ -314,6 +322,13 @@ public final class PaperStreamConfig {
         entityStackMessage = string(yaml, "entities.stack-guard.message", entityStackMessage,
             "Action bar text for a player whose placement was refused (MiniMessage). Empty = no message.");
 
+        sleepingHoppers = bool(yaml, "beta.sleeping-hoppers.enabled", sleepingHoppers,
+            "Beta. Hoppers with nothing to move sleep instead of checking every tick. Their inventory, neighbor blocks, redstone and items or container minecarts coming close wake them right away. Turned on by the profile performance-beta.");
+        sleepingHoppersMaxTicks = integer(yaml, "beta.sleeping-hoppers.max-sleep-ticks", sleepingHoppersMaxTicks,
+            "Longest sleep in ticks. Covers plugins that change a container without telling the world.");
+        skipUnchangedChunkSaves = bool(yaml, "beta.skip-unchanged-chunk-saves.enabled", skipUnchangedChunkSaves,
+            "Beta. Chunks loaded from disk that nobody changed are not written again on unload or autosave. Saves main thread time and disk writes when players fly around. Turned on by the profile performance-beta.");
+
         idleMode = bool(yaml, "world.idle.enabled", idleMode,
             "With nobody online, worlds tick only once per second. Plugins keep running normally.");
         idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
@@ -372,6 +387,7 @@ public final class PaperStreamConfig {
         redstoneTriggerSeconds = Math.max(1, redstoneTriggerSeconds);
         redstoneThrottledPerSecond = Math.max(1, redstoneThrottledPerSecond);
         redstoneCooldownSeconds = Math.max(1, redstoneCooldownSeconds);
+        sleepingHoppersMaxTicks = Math.max(1, Math.min(200, sleepingHoppersMaxTicks));
 
         try {
             yaml.save(FILE);

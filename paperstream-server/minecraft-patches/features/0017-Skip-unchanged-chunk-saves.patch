@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Wed, 4 Nov 2026 07:09:15 +0100
+Subject: [PATCH] Skip unchanged chunk saves
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+index 7463cf5bf871033a0e5f6d54dd0d427c474d7cd4..d9b23803a383fe0257e5399417f4d1b01e768532 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+@@ -339,6 +339,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+             }
+ 
+             try {
++                final int storedVersion = data.getIntOr("DataVersion", -1); // PaperStream
+                 // run converters
+                 final CompoundTag converted = this.world.getChunkSource().chunkMap.upgradeChunkTag(data);
+ 
+@@ -357,6 +358,15 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+                     new ChunkPos(this.chunkX, this.chunkZ)
+                 );
+ 
++                // PaperStream start - skip unchanged chunk saves
++                if (net.paperstream.PaperStreamConfig.skipUnchangedChunkSaves && chunk instanceof net.minecraft.world.level.chunk.ImposterProtoChunk imposter
++                    && storedVersion == net.minecraft.SharedConstants.getCurrentVersion().dataVersion().version()
++                    && chunkData.lightCorrect() && imposter.getUpgradeData().isEmpty() && imposter.getBlendingData() == null
++                    && chunkData.heightmaps().keySet().containsAll(net.minecraft.world.level.chunk.status.ChunkStatus.FULL.heightmapsAfter())) {
++                    // unveraenderte Chunks nicht erneut schreiben
++                    imposter.getWrapped().tryMarkSaved();
++                }
++                // PaperStream end - skip unchanged chunk saves
+                 return new TaskResult<>(new ReadChunk(chunk, chunkData), null);
+             } catch (final Throwable thr2) {
+                 LOGGER.error("Failed to parse chunk data for task: " + this.toString() + ", chunk data will be lost", thr2);
+diff --git a/net/minecraft/world/level/chunk/ChunkAccess.java b/net/minecraft/world/level/chunk/ChunkAccess.java
+index 54ddcf92e72b9cbd0eb442e5d0faa83c0cf3b33b..fddca1f3c2f18b046d2c250d66cdbb83f7c56ece 100755
+--- a/net/minecraft/world/level/chunk/ChunkAccess.java
++++ b/net/minecraft/world/level/chunk/ChunkAccess.java
+@@ -440,6 +440,7 @@ public abstract class ChunkAccess implements BiomeManager.NoiseBiomeSource, Ligh
+ 
+     public void incrementInhabitedTime(long amount) {
+         this.inhabitedTime += amount;
++        if (net.paperstream.PaperStreamConfig.skipUnchangedChunkSaves && !this.unsaved) this.markUnsaved(); // PaperStream - skip unchanged chunk saves
+     }
+ 
+     public void setInhabitedTime(long inhabitedTime) {
