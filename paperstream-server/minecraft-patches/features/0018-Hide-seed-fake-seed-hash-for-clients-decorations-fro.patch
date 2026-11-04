@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Wed, 4 Nov 2026 01:09:22 +0100
+Subject: [PATCH] Hide seed: fake seed hash for clients, decorations from a
+ secret seed
+
+
+diff --git a/net/minecraft/server/level/ServerPlayer.java b/net/minecraft/server/level/ServerPlayer.java
+index 1137be30f125cb79f05f3e5c104cdf8cca979ff1..455a16b330aafe49e01f1c6673ec78bc115d18e3 100755
+--- a/net/minecraft/server/level/ServerPlayer.java
++++ b/net/minecraft/server/level/ServerPlayer.java
+@@ -2901,7 +2901,7 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
+         return new CommonPlayerSpawnInfo(
+             level.dimensionTypeRegistration(),
+             level.dimension(),
+-            BiomeManager.obfuscateSeed(level.getSeed()),
++            BiomeManager.obfuscateSeed(net.paperstream.PaperStreamConfig.hideSeed ? level.getSeed() ^ net.paperstream.PaperStreamConfig.hideSeedSecret : level.getSeed()), // PaperStream - falscher Seed-Hash fuer Seed-Cracker
+             this.gameMode.getGameModeForPlayer(),
+             Optional.ofNullable(this.gameMode.getPreviousGameModeForPlayer()),
+             level.isDebug(),
+diff --git a/net/minecraft/world/level/chunk/ChunkGenerator.java b/net/minecraft/world/level/chunk/ChunkGenerator.java
+index cc4800823c20e8ecbf0b4d74fd85a22bcb70c74c..aee15dbe2d5f471f8698a9f35552697696164f29 100755
+--- a/net/minecraft/world/level/chunk/ChunkGenerator.java
++++ b/net/minecraft/world/level/chunk/ChunkGenerator.java
+@@ -467,6 +467,10 @@ public abstract class ChunkGenerator {
+                                 .orElseGet(feature::toString);
+                             // Paper start - Configurable feature seeds; change populationSeed used in random
+                             long featurePopulationSeed = decorationSeed;
++                            // PaperStream - Erze mit geheimem Seed, ein geknackter Welt-Seed zeigt sie dann falsch
++                            if (net.paperstream.PaperStreamConfig.hideSeed) {
++                                featurePopulationSeed = random.setDecorationSeed(level.getSeed() ^ net.paperstream.PaperStreamConfig.hideSeedSecret, origin.getX(), origin.getZ());
++                            }
+                             final long configFeatureSeed = level.getMinecraftWorld().paperConfig().featureSeeds.features.getLong(feature.feature());
+                             if (configFeatureSeed != -1) {
+                                 featurePopulationSeed = random.setDecorationSeed(configFeatureSeed, origin.getX(), origin.getZ()); // See WorldgenRandom.setDecorationSeed from above

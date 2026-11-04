@@ -119,6 +119,14 @@ public final class PaperStreamConfig {
     public static int entityStackPerChunk = 96;
     public static String entityStackMessage = "<red>Too many of these in one spot.";
 
+    // beta.sleeping-hoppers
+    public static boolean sleepingHoppers = false;
+    public static int sleepingHoppersMaxTicks = 20;
+
+    // world.hide-seed
+    public static boolean hideSeed = false;
+    public static long hideSeedSecret = 0L;
+
     // world.idle
     public static boolean idleMode = true;
     public static int idleAfterSeconds = 60;
@@ -314,6 +322,20 @@ public final class PaperStreamConfig {
         entityStackMessage = string(yaml, "entities.stack-guard.message", entityStackMessage,
             "Action bar text for a player whose placement was refused (MiniMessage). Empty = no message.");
 
+        sleepingHoppers = bool(yaml, "beta.sleeping-hoppers.enabled", sleepingHoppers,
+            "Beta. Hoppers with nothing to move sleep instead of checking every tick. Their inventory, neighbor blocks, redstone and items or container minecarts coming close wake them right away. Turned on by the profile performance-beta.");
+        sleepingHoppersMaxTicks = integer(yaml, "beta.sleeping-hoppers.max-sleep-ticks", sleepingHoppersMaxTicks,
+            "Longest sleep in ticks. Covers plugins that change a container without telling the world.");
+        hideSeed = bool(yaml, "world.hide-seed.enabled", hideSeed,
+            "Against seed cracking mods: players get a fake seed hash, and ores and other decorations are placed with a secret seed. A cracked seed then shows wrong ore positions. Only chunks generated from now on are protected.");
+        init(yaml, "world.hide-seed.secret", 0L,
+            "Secret seed for decorations, created on first start. Changing it changes ores in chunks generated afterwards. Never share it.");
+        hideSeedSecret = yaml.getLong("world.hide-seed.secret", 0L);
+        if (hideSeedSecret == 0L) {
+            hideSeedSecret = new java.security.SecureRandom().nextLong() | 1L;
+            yaml.set("world.hide-seed.secret", hideSeedSecret);
+        }
+
         idleMode = bool(yaml, "world.idle.enabled", idleMode,
             "With nobody online, worlds tick only once per second. Plugins keep running normally.");
         idleAfterSeconds = integer(yaml, "world.idle.after-seconds", idleAfterSeconds,
@@ -372,6 +394,7 @@ public final class PaperStreamConfig {
         redstoneTriggerSeconds = Math.max(1, redstoneTriggerSeconds);
         redstoneThrottledPerSecond = Math.max(1, redstoneThrottledPerSecond);
         redstoneCooldownSeconds = Math.max(1, redstoneCooldownSeconds);
+        sleepingHoppersMaxTicks = Math.max(1, Math.min(200, sleepingHoppersMaxTicks));
 
         try {
             yaml.save(FILE);
