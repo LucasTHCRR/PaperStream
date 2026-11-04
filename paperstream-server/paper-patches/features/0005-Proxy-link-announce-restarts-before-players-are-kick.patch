@@ -5,7 +5,7 @@ Subject: [PATCH] Proxy link: announce restarts before players are kicked
 
 
 diff --git a/src/main/java/org/spigotmc/RestartCommand.java b/src/main/java/org/spigotmc/RestartCommand.java
-index f2be113d9032215b824e8189e137d3959ad37127..f417e9f2221dc01ed4f162f9cb4e5fffcd58c3b7 100755
+index 905dde12db8ac8dc0ff8ff6898867039e6e4e550..7bb65b8d369e1455eac02d9ae8cadb261be73192 100755
 --- a/src/main/java/org/spigotmc/RestartCommand.java
 +++ b/src/main/java/org/spigotmc/RestartCommand.java
 @@ -50,6 +50,7 @@ public class RestartCommand extends Command {
@@ -15,4 +15,4 @@ index f2be113d9032215b824e8189e137d3959ad37127..f417e9f2221dc01ed4f162f9cb4e5fff
 +        net.paperstream.link.ProxyLink.beforeShutdown(MinecraftServer.getServer()); // PaperStream - let the proxy move players away before the kick
          if (MinecraftServer.getServer().isSameThread()) {
              // Kick all players
-             for (ServerPlayer p : com.google.common.collect.ImmutableList.copyOf(MinecraftServer.getServer().getPlayerList().getPlayers())) {
+             for (ServerPlayer p : com.google.common.collect.ImmutableList.copyOf(MinecraftServer.getServer().getPlayerList().players)) {

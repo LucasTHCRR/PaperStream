@@ -5,7 +5,7 @@ Subject: [PATCH] Memory: unload brake when the live heap is nearly full
 
 
 diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-index bf6efc6eb9c202062ba8057cac17a2a9a87892b8..d0e579e53b1c19faf808dc91982f4e37e16db957 100755
+index 6724731a274c9adf4ad541c806731fe212622f6a..c572fdb57f8185c2ae8bd47645fcaa58beefd088 100755
 --- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
 +++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
 @@ -209,12 +209,14 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
@@ -26,7 +26,7 @@ index bf6efc6eb9c202062ba8057cac17a2a9a87892b8..d0e579e53b1c19faf808dc91982f4e37
  
      @Override
 diff --git a/io/papermc/paper/FeatureHooks.java b/io/papermc/paper/FeatureHooks.java
-index 4da0ea128cea7bad78e7502784203aa7841556cc..f718d331778911c16b795fc709cd9db66574e9bd 100755
+index c1939289057f50351403cf0573230826ac2dbe41..654dbf174e5dbe39dd082c917a50288cc24a428e 100755
 --- a/io/papermc/paper/FeatureHooks.java
 +++ b/io/papermc/paper/FeatureHooks.java
 @@ -47,7 +47,8 @@ public final class FeatureHooks {

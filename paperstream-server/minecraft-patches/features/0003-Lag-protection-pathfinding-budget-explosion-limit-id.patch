@@ -6,7 +6,7 @@ Subject: [PATCH] Lag protection, pathfinding budget, explosion limit, idle
 
 
 diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
-index 6c5f69f2a693e97665f3d8b477f8ca7ffebb7d15..a7c00b11c4cbf504452d41e67c786ca604df9902 100644
+index 7746e16b261579d2a167509bb0547951da239473..0278444e09ea52de97ee4bcec24c6782e4dcbaed 100644
 --- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 +++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 @@ -631,6 +631,7 @@ public final class RegionizedPlayerChunkLoader {
@@ -18,10 +18,10 @@ index 6c5f69f2a693e97665f3d8b477f8ca7ffebb7d15..a7c00b11c4cbf504452d41e67c786ca6
  
              return configLimit;
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 452fdd607fff12eb292559e02d1ff9f31b563f2a..28a741e30a3c79fbdd966e9053d6916d268bba57 100755
+index 8a35943a7f8c10bef2544297c27216a8661517fa..0b4ed54c6b3cb07af2bce40622bd8074ce01b34b 100755
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -1811,7 +1811,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1837,7 +1837,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          this.updateEffectiveRespawnData();
  
          this.isIteratingOverLevels = true; // Paper - Throw exception on world create while being ticked
@@ -32,7 +32,7 @@ index 452fdd607fff12eb292559e02d1ff9f31b563f2a..28a741e30a3c79fbdd966e9053d6916d
              level.hasEntityMoveEvent = io.papermc.paper.event.entity.EntityMoveEvent.getHandlerList().getRegisteredListeners().length > 0; // Paper - Add EntityMoveEvent
              level.updateLagCompensationTick(); // Paper - lag compensation
 diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
-index 075e294333115738b25b64a390df323276cf39f9..722e4fefbde994fec1f133794945846e7ec1c9a8 100755
+index 396ab3cdcf6f726ce7133395bb39594ef4b1c011..603507a9920cf50c2c90fbd0b0edde82d2830f57 100755
 --- a/net/minecraft/server/level/ServerChunkCache.java
 +++ b/net/minecraft/server/level/ServerChunkCache.java
 @@ -614,7 +614,7 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
@@ -45,7 +45,7 @@ index 075e294333115738b25b64a390df323276cf39f9..722e4fefbde994fec1f133794945846e
                  NaturalSpawner.spawnForChunk(this.level, chunk, spawnCookie, spawningCategories);
              }
 diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
-index 0bed7673d0242c35a86c553a7f324f58f079cf32..c3dfacbf9f848bf2b7576c5f77c94e7b5184583b 100755
+index e0942dbba85b49c6ca04f783b5ea80ab964ba6bd..d5fdc11a76e6013fb30d787678b462d42240a0a6 100755
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
 @@ -184,6 +184,7 @@ import org.slf4j.Logger;
@@ -56,7 +56,7 @@ index 0bed7673d0242c35a86c553a7f324f58f079cf32..c3dfacbf9f848bf2b7576c5f77c94e7b
      public static final BlockPos END_SPAWN_POINT = new BlockPos(100, 50, 0);
      public static final IntProvider RAIN_DELAY = UniformInt.of(12000, 180000);
      public static final IntProvider RAIN_DURATION = UniformInt.of(12000, 24000);
-@@ -1964,6 +1965,7 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+@@ -1949,6 +1950,7 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
          final WeightedList<ExplosionParticleInfo> blockParticles,
          final Holder<SoundEvent> explosionSound
      ) {
@@ -65,7 +65,7 @@ index 0bed7673d0242c35a86c553a7f324f58f079cf32..c3dfacbf9f848bf2b7576c5f77c94e7b
          this.explode0(source, damageSource, damageCalculator, x, y, z, r, fire, interactionType, smallExplosionParticles, largeExplosionParticles, blockParticles, explosionSound);
      }
 diff --git a/net/minecraft/world/entity/ai/navigation/PathNavigation.java b/net/minecraft/world/entity/ai/navigation/PathNavigation.java
-index 862224dfc003bf02ee0d7c1d804549210d6c8ffa..27d95d26c54ad53dc8ebcaf0c28b8086d86c84c3 100755
+index 1eb0afab932c3828a1f19861994b63b247df0fbb..f3aa6a4025e95475eeb59018e07eaa288cfc1ef0 100755
 --- a/net/minecraft/world/entity/ai/navigation/PathNavigation.java
 +++ b/net/minecraft/world/entity/ai/navigation/PathNavigation.java
 @@ -171,6 +171,12 @@ public abstract class PathNavigation {

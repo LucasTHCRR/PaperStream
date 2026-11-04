@@ -5,10 +5,10 @@ Subject: [PATCH] Per world MSPT and entity tick throttle
 
 
 diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
-index 829f7685904fd741e00403647ae76d32275c34a3..76002854a338a447cae8c6b87345fdbdb666a194 100644
+index ce6b57eeeeb1bd652f4bb53c19dcfbc05126c7e9..c62e2eaf09bbdbce185f51bda28337c60400efd0 100644
 --- a/io/papermc/paper/entity/activation/ActivationRange.java
 +++ b/io/papermc/paper/entity/activation/ActivationRange.java
-@@ -320,6 +320,11 @@ public final class ActivationRange {
+@@ -319,6 +319,11 @@ public final class ActivationRange {
              }
          }
          // removed the original's dumb tick skipping for active entities
@@ -21,10 +21,10 @@ index 829f7685904fd741e00403647ae76d32275c34a3..76002854a338a447cae8c6b87345fdbd
      }
  
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 879f53a64e3070aca5f6c58a0e200b62c3e51117..452fdd607fff12eb292559e02d1ff9f31b563f2a 100755
+index c5dc23ff9a3cd30f7bae8ca896fede1a19e7a901..8a35943a7f8c10bef2544297c27216a8661517fa 100755
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -1819,8 +1819,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1845,8 +1845,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
              profiler.push(() -> level + " " + level.dimension().identifier());
              profiler.push("tick");
  
@@ -36,7 +36,7 @@ index 879f53a64e3070aca5f6c58a0e200b62c3e51117..452fdd607fff12eb292559e02d1ff9f3
                  CrashReport report = CrashReport.forThrowable(t, "Exception ticking world");
                  level.fillReportDetails(report);
 diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
-index 9415a75893a81f3d312117377b03aa440479599b..0bed7673d0242c35a86c553a7f324f58f079cf32 100755
+index 229ff740e0418a05d824a67401ae6f105b4c3642..e0942dbba85b49c6ca04f783b5ea80ab964ba6bd 100755
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
 @@ -183,6 +183,7 @@ import org.jspecify.annotations.Nullable;
@@ -48,10 +48,10 @@ index 9415a75893a81f3d312117377b03aa440479599b..0bed7673d0242c35a86c553a7f324f58
      public static final IntProvider RAIN_DELAY = UniformInt.of(12000, 180000);
      public static final IntProvider RAIN_DURATION = UniformInt.of(12000, 24000);
 diff --git a/net/minecraft/world/entity/Mob.java b/net/minecraft/world/entity/Mob.java
-index 1b89e5909d810d9da528c3e6cc312ef93d1c9d84..c33d77694b38c18a231452793ee97188680d4ae5 100755
+index ea144213f5ac2f813c9007113e4066a3295a7f76..83901d82b18e8f54d8f182048ff4bcd3c000e331 100755
 --- a/net/minecraft/world/entity/Mob.java
 +++ b/net/minecraft/world/entity/Mob.java
-@@ -105,6 +105,10 @@ import org.bukkit.event.entity.EntityUnleashEvent;
+@@ -101,6 +101,10 @@ import org.bukkit.event.entity.EntityUnleashEvent;
  // CraftBukkit end
  
  public abstract class Mob extends LivingEntity implements Targeting, EquipmentUser, Leashable {

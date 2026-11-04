@@ -5,7 +5,7 @@ Subject: [PATCH] Let the tripwire hook setting skip the 26.x hook check too
 
 
 diff --git a/net/minecraft/world/level/block/TripWireHookBlock.java b/net/minecraft/world/level/block/TripWireHookBlock.java
-index 9d08ce61f964bb3115c708091549a233dabcf0e3..9ed0db1985766a75bc1263d634ca4ee820c3a564 100755
+index ad7a8c082c20b1ad30c520a94e9f902986ed6030..80723863539aae155a9e67bd0cecf3066dd04d43 100755
 --- a/net/minecraft/world/level/block/TripWireHookBlock.java
 +++ b/net/minecraft/world/level/block/TripWireHookBlock.java
 @@ -170,7 +170,8 @@ public class TripWireHookBlock extends Block {

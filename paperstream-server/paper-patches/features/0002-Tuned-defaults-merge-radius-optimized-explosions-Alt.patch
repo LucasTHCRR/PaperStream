@@ -6,10 +6,10 @@ Subject: [PATCH] Tuned defaults: merge radius, optimized explosions, Alternate
 
 
 diff --git a/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java b/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
-index 86ae93a9cad3d165bbe0aec5babbe98dbf50d625..9d8913e614573e26b2139a8fff0194c749f0d4cb 100755
+index 76d4b3ecec1e380207918988d32f828327ba5751..2ca1e1daf0c98d15000acf9282d0fdbbdc01c07b 100755
 --- a/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
 +++ b/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
-@@ -412,7 +412,7 @@ public class WorldConfiguration extends ConfigurationPart {
+@@ -411,7 +411,7 @@ public class WorldConfiguration extends ConfigurationPart {
      public class Environment extends ConfigurationPart {
          public boolean disableThunder = false;
          public boolean disableIceAndSnow = false;
@@ -18,7 +18,7 @@ index 86ae93a9cad3d165bbe0aec5babbe98dbf50d625..9d8913e614573e26b2139a8fff0194c7
          public boolean disableExplosionKnockback = false;
          public boolean generateFlatBedrock = false;
          public FrostedIce frostedIce;
-@@ -577,7 +577,7 @@ public class WorldConfiguration extends ConfigurationPart {
+@@ -576,7 +576,7 @@ public class WorldConfiguration extends ConfigurationPart {
      public class Misc extends ConfigurationPart {
          public boolean updatePathfindingOnBlockUpdate = true;
          public boolean showSignClickCommandFailureMsgsToPlayer = false;

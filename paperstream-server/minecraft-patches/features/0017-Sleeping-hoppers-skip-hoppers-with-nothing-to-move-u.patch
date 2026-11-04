@@ -6,10 +6,10 @@ Subject: [PATCH] Sleeping hoppers: skip hoppers with nothing to move until
 
 
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index 89d823202bd7d1c7f68c4dcebe3187cf76d4fd1d..29a56114f0d928dd67693c42a38ac53d4c2eef3d 100755
+index a79d8d21eeb7e064b1d7787ea8d9dc2ee7e801e5..1be511d5de667105442677e019360cac7dadea7d 100755
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -5059,6 +5059,9 @@ public abstract class Entity
+@@ -4975,6 +4975,9 @@ public abstract class Entity
              if (fx != this.blockPosition.getX() || fy != this.blockPosition.getY() || fz != this.blockPosition.getZ()) {
                  this.blockPosition = new BlockPos(fx, fy, fz);
                  this.inBlockState = null;
@@ -32,7 +32,7 @@ index 58b99596b16e1dd8b0c9bcde5d465c6df52cc28b..1749d107946c4a6fb50033a64a113a5f
  
      @Override
 diff --git a/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java b/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java
-index d3651110e15e8e1ad530df4bb4c05dbc73a79a63..2d44e3d82a8e74a9f815b5386766973279bddcc6 100755
+index 91d699adfbfa211db85734a6406d690aed5f0324..6e3d802bfc0e4009475aeb695faa4cf688b8efbb 100755
 --- a/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java
 +++ b/net/minecraft/world/entity/vehicle/minecart/AbstractMinecartContainer.java
 @@ -66,6 +66,7 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
@@ -44,10 +44,10 @@ index d3651110e15e8e1ad530df4bb4c05dbc73a79a63..2d44e3d82a8e74a9f815b53867669732
  
      @Override
 diff --git a/net/minecraft/world/level/block/HopperBlock.java b/net/minecraft/world/level/block/HopperBlock.java
-index 3932da81757ea0ab7a41617165f5b64dc44ea3eb..12b0327afa5c83ae361f5b1e1bc583b098c907d6 100755
+index e032b5289abe413009fe7c9068e71e788fab512a..8977d7880106f9fc1eec7d84de31026426867b9a 100755
 --- a/net/minecraft/world/level/block/HopperBlock.java
 +++ b/net/minecraft/world/level/block/HopperBlock.java
-@@ -118,6 +118,7 @@ public class HopperBlock extends BaseEntityBlock {
+@@ -117,6 +117,7 @@ public class HopperBlock extends BaseEntityBlock {
      protected void neighborChanged(
          final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
      ) {
@@ -56,10 +56,10 @@ index 3932da81757ea0ab7a41617165f5b64dc44ea3eb..12b0327afa5c83ae361f5b1e1bc583b0
      }
  
 diff --git a/net/minecraft/world/level/block/entity/BlockEntity.java b/net/minecraft/world/level/block/entity/BlockEntity.java
-index ae0df53c3be7ebcf48886adbedfaa2c071a94023..cae0fdd9d8be06cd5b9352d0309a201c2cfd8247 100755
+index 2c9fb60cae8065b1cd70d6ec53122cec9cf7f2a7..706e6e5446235fee22f701e700803e333f87a3c9 100755
 --- a/net/minecraft/world/level/block/entity/BlockEntity.java
 +++ b/net/minecraft/world/level/block/entity/BlockEntity.java
-@@ -217,6 +217,7 @@ public abstract class BlockEntity implements DebugValueSource, TypedInstance<Blo
+@@ -222,6 +222,7 @@ public abstract class BlockEntity implements DebugValueSource, TypedInstance<Blo
  
      protected static void setChanged(final Level level, final BlockPos worldPosition, final BlockState blockState) {
          level.blockEntityChanged(worldPosition);
@@ -68,7 +68,7 @@ index ae0df53c3be7ebcf48886adbedfaa2c071a94023..cae0fdd9d8be06cd5b9352d0309a201c
              level.updateNeighbourForOutputSignal(worldPosition, blockState.getBlock());
          }
 diff --git a/net/minecraft/world/level/block/entity/HopperBlockEntity.java b/net/minecraft/world/level/block/entity/HopperBlockEntity.java
-index fef616d7b92454a721f7a14941b62a8963080cc5..9967d0b7126cf4470a476c2f91ed0c4d30fcd53e 100755
+index ce6b64e00a0a13ebdceda56d975d79f60c26b86d..f7f7287094d1114ea1452567018f96b664f9f0c7 100755
 --- a/net/minecraft/world/level/block/entity/HopperBlockEntity.java
 +++ b/net/minecraft/world/level/block/entity/HopperBlockEntity.java
 @@ -36,6 +36,7 @@ public class HopperBlockEntity extends RandomizableContainerBlockEntity implemen

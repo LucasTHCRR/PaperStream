@@ -64,10 +64,10 @@ index 0743659c9f1122088adad4992b93649efc9ba873..7746e16b261579d2a167509bb0547951
              this.lastChunkX = currentChunkX;
              this.lastChunkZ = currentChunkZ;
 diff --git a/net/minecraft/server/dedicated/DedicatedServer.java b/net/minecraft/server/dedicated/DedicatedServer.java
-index 0b6d7f99edde802cb464baa5a4b2b4a4dcce684a..681c4fda8a73aafeb7be4558f2ee0a87e755d526 100755
+index 6a5d404e570ede5d49c82bccc30aa75ddd58983b..ce23c7cd98a3d369b13d6251f0064379ddf17e97 100755
 --- a/net/minecraft/server/dedicated/DedicatedServer.java
 +++ b/net/minecraft/server/dedicated/DedicatedServer.java
-@@ -248,6 +248,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+@@ -287,6 +287,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
          org.spigotmc.WatchdogThread.doStart(org.spigotmc.SpigotConfig.timeoutTime, org.spigotmc.SpigotConfig.restartOnCrash); // Paper - start watchdog thread
          consoleThread.start(); // Paper - Enhance console tab completions for brigadier commands; start console thread after MinecraftServer.console & PaperConfig are initialized
          io.papermc.paper.command.PaperCommands.registerCommands(this); // Paper - setup /paper command

@@ -33,10 +33,10 @@ index 7463cf5bf871033a0e5f6d54dd0d427c474d7cd4..d9b23803a383fe0257e5399417f4d1b0
              } catch (final Throwable thr2) {
                  LOGGER.error("Failed to parse chunk data for task: " + this.toString() + ", chunk data will be lost", thr2);
 diff --git a/net/minecraft/world/level/chunk/ChunkAccess.java b/net/minecraft/world/level/chunk/ChunkAccess.java
-index 28f703204afd834cd50335346ef065670d6b37ad..b4fffbb1b06497add707bfeeba10820aa587459e 100755
+index c73b9871faa87493e081cb54e1bf1dce487359c6..00bd2fea7ab965797d825cfa8a587b3aa8c7544e 100755
 --- a/net/minecraft/world/level/chunk/ChunkAccess.java
 +++ b/net/minecraft/world/level/chunk/ChunkAccess.java
-@@ -446,6 +446,7 @@ public abstract class ChunkAccess implements LightChunk, StructureAccess, BiomeM
+@@ -440,6 +440,7 @@ public abstract class ChunkAccess implements LightChunk, StructureAccess, BiomeM
  
      public void incrementInhabitedTime(final long inhabitedTimeDelta) {
          this.inhabitedTime += inhabitedTimeDelta;

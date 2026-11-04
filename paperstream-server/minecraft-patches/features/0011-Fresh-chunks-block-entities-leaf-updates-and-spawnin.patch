@@ -7,20 +7,20 @@ Subject: [PATCH] Fresh chunks: block entities, leaf updates and spawning wait
 
 
 diff --git a/io/papermc/paper/entity/activation/ActivationRange.java b/io/papermc/paper/entity/activation/ActivationRange.java
-index 2003f1aca9177ff0a0ea8ce76ee45509f35bf326..f41437f61c6bbe278620f3b8af1fd0d04874254b 100644
+index 816a1a1e548633917134668e577a952dd0b15b07..746c6027bab0bbe0cf7246aac17dbbb1bf8194fc 100644
 --- a/io/papermc/paper/entity/activation/ActivationRange.java
 +++ b/io/papermc/paper/entity/activation/ActivationRange.java
-@@ -302,7 +302,7 @@ public final class ActivationRange {
+@@ -301,7 +301,7 @@ public final class ActivationRange {
          }
          // special case always immunities
          // immunize brand-new entities, dead entities, and portal scenarios
--        if (entity.defaultActivationState || entity.tickCount < 20 * 10 || !entity.isAlive() || (entity.portalProcess != null && !entity.portalProcess.hasExpired()) || entity.getPortalCooldown() > 0) {
-+        if (entity.defaultActivationState || (entity.tickCount < 20 * 10 && !(entity.psFromDisk && net.paperstream.PaperStreamConfig.freshChunks)) || !entity.isAlive() || (entity.portalProcess != null && !entity.portalProcess.hasExpired()) || entity.getPortalCooldown() > 0) {
+-        if (entity.defaultActivationState || entity.tickCount < 20 * 10 || !entity.isAlive() || (entity.portalProcess != null && !entity.portalProcess.hasExpired()) || entity.portalCooldown > 0) {
++        if (entity.defaultActivationState || (entity.tickCount < 20 * 10 && !(entity.psFromDisk && net.paperstream.PaperStreamConfig.freshChunks)) || !entity.isAlive() || (entity.portalProcess != null && !entity.portalProcess.hasExpired()) || entity.portalCooldown > 0) {
              return true;
          }
          // immunize leashed entities
 diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
-index 722e4fefbde994fec1f133794945846e7ec1c9a8..6b4c9b417202f21d3532642cad34aeabc2cc23ec 100755
+index 603507a9920cf50c2c90fbd0b0edde82d2830f57..c06181cddf5a4b886ef27c8f3538a35050761233 100755
 --- a/net/minecraft/server/level/ServerChunkCache.java
 +++ b/net/minecraft/server/level/ServerChunkCache.java
 @@ -614,7 +614,7 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
@@ -33,10 +33,10 @@ index 722e4fefbde994fec1f133794945846e7ec1c9a8..6b4c9b417202f21d3532642cad34aeab
                  NaturalSpawner.spawnForChunk(this.level, chunk, spawnCookie, spawningCategories);
              }
 diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
-index b159627982c4f632f4978f4da072c3fc6e7fe5b5..7884a1ce0916868c881e4b06eb633ce27d0691c4 100755
+index a78dab90726cf748b4ca3e73b2b1ec1c6fd51977..c5c24dd9fdbd280a4b0714f16d23bb748c70a519 100755
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -1370,6 +1370,9 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
+@@ -1355,6 +1355,9 @@ public class ServerLevel extends Level implements WorldGenLevel, ServerEntityGet
              // PaperStream start - redstone clock guard
              if (!this.psRedstone.allowTick(pos, type)) {
                  this.scheduleTick(pos, type, this.psRedstone.postponeDelay());
@@ -47,10 +47,10 @@ index b159627982c4f632f4978f4da072c3fc6e7fe5b5..7884a1ce0916868c881e4b06eb633ce2
              // PaperStream end - redstone clock guard
              state.tick(this, pos, this.random);
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index d958c4717739e588c5f8985dec5d215c745f49fc..89d823202bd7d1c7f68c4dcebe3187cf76d4fd1d 100755
+index 74a2b3dcd303b25e9c26f3e4d4220b390b32f1d5..a79d8d21eeb7e064b1d7787ea8d9dc2ee7e801e5 100755
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -374,6 +374,7 @@ public abstract class Entity
+@@ -373,6 +373,7 @@ public abstract class Entity
      protected int numCollisions = 0; // Paper - Cap entity collisions
      public boolean fromNetherPortal; // Paper - Add option to nerf pigmen from nether portals
      public boolean spawnedViaMobSpawner; // Paper - Yes this name is similar to above, upstream took the better one
@@ -58,7 +58,7 @@ index d958c4717739e588c5f8985dec5d215c745f49fc..89d823202bd7d1c7f68c4dcebe3187cf
      // Paper start
      public @Nullable Vec3 origin;
      public @Nullable UUID originWorld;
-@@ -2871,6 +2872,7 @@ public abstract class Entity
+@@ -2780,6 +2781,7 @@ public abstract class Entity
              }
  
              spawnedViaMobSpawner = input.getBooleanOr("Paper.FromMobSpawner", false); // Restore entity's from mob spawner status
@@ -67,10 +67,10 @@ index d958c4717739e588c5f8985dec5d215c745f49fc..89d823202bd7d1c7f68c4dcebe3187cf
              input.getString("Paper.SpawnReason").ifPresent(spawnReasonName -> {
                  try {
 diff --git a/net/minecraft/world/level/chunk/LevelChunk.java b/net/minecraft/world/level/chunk/LevelChunk.java
-index 681563230061212afa7994c8eb16c068754db5dd..1e532ab3129b98f2097ebb65535f4bd35b087c1d 100755
+index a9d781e2fcac4e2426b0e35e46bbc10c540f9fd9..70ed817ddcdec9fe53640f06cec3e4a7fd193383 100755
 --- a/net/minecraft/world/level/chunk/LevelChunk.java
 +++ b/net/minecraft/world/level/chunk/LevelChunk.java
-@@ -627,9 +627,16 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+@@ -628,9 +628,16 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
          }
      }
  
@@ -87,7 +87,7 @@ index 681563230061212afa7994c8eb16c068754db5dd..1e532ab3129b98f2097ebb65535f4bd3
          // Paper start
          this.loadedTicketLevel = true;
          // Paper end
-@@ -942,7 +949,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
+@@ -944,7 +951,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource, ca.spot
          public void tick() {
              if (!this.blockEntity.isRemoved() && this.blockEntity.hasLevel()) {
                  BlockPos pos = this.blockEntity.getBlockPos();

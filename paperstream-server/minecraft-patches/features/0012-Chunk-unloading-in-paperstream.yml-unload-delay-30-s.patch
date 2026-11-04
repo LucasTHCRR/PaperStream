@@ -6,7 +6,7 @@ Subject: [PATCH] Chunk unloading in paperstream.yml: unload delay (30 s by
 
 
 diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-index 277bc96efefed4525864f6afb2294d677ff038c7..bf6efc6eb9c202062ba8057cac17a2a9a87892b8 100755
+index 4a3f07daad8b48eaf3bea02bdacbfb0670dddf90..6724731a274c9adf4ad541c806731fe212622f6a 100755
 --- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
 +++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
 @@ -209,12 +209,12 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
@@ -25,7 +25,7 @@ index 277bc96efefed4525864f6afb2294d677ff038c7..bf6efc6eb9c202062ba8057cac17a2a9
  
      @Override
 diff --git a/io/papermc/paper/FeatureHooks.java b/io/papermc/paper/FeatureHooks.java
-index 504fdb2c4000eafae4341ec8b24ce9cb0fcdc274..4da0ea128cea7bad78e7502784203aa7841556cc 100755
+index 4dd1baf17597d8801a286346a2b74345f4d23dfa..c1939289057f50351403cf0573230826ac2dbe41 100755
 --- a/io/papermc/paper/FeatureHooks.java
 +++ b/io/papermc/paper/FeatureHooks.java
 @@ -37,9 +37,19 @@ public final class FeatureHooks {
