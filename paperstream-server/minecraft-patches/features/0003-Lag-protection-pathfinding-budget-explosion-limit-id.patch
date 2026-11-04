@@ -6,7 +6,7 @@ Subject: [PATCH] Lag protection, pathfinding budget, explosion limit, idle
 
 
 diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
-index 7746e16b261579d2a167509bb0547951da239473..0278444e09ea52de97ee4bcec24c6782e4dcbaed 100644
+index 6c5f69f2a693e97665f3d8b477f8ca7ffebb7d15..a7c00b11c4cbf504452d41e67c786ca604df9902 100644
 --- a/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 +++ b/ca/spottedleaf/moonrise/patches/chunk_system/player/RegionizedPlayerChunkLoader.java
 @@ -631,6 +631,7 @@ public final class RegionizedPlayerChunkLoader {
@@ -18,10 +18,10 @@ index 7746e16b261579d2a167509bb0547951da239473..0278444e09ea52de97ee4bcec24c6782
  
              return configLimit;
 diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
-index 292967a2e13917cd425c7e7897d9246328ec7c24..8c25d4eb7c02a60302dfdf20464b4696064927e1 100755
+index 452fdd607fff12eb292559e02d1ff9f31b563f2a..28a741e30a3c79fbdd966e9053d6916d268bba57 100755
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -1812,7 +1812,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1811,7 +1811,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          this.updateEffectiveRespawnData();
  
          this.isIteratingOverLevels = true; // Paper - Throw exception on world create while being ticked
@@ -45,7 +45,7 @@ index 075e294333115738b25b64a390df323276cf39f9..722e4fefbde994fec1f133794945846e
                  NaturalSpawner.spawnForChunk(this.level, chunk, spawnCookie, spawningCategories);
              }
 diff --git a/net/minecraft/server/level/ServerLevel.java b/net/minecraft/server/level/ServerLevel.java
-index d3885233216c643c15a1d2e9129f6d4e04ce8015..8c387290f2b02e0bed3fe918134ea5b52a3341d0 100755
+index 0bed7673d0242c35a86c553a7f324f58f079cf32..c3dfacbf9f848bf2b7576c5f77c94e7b5184583b 100755
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
 @@ -184,6 +184,7 @@ import org.slf4j.Logger;

@@ -6,10 +6,10 @@ Subject: [PATCH] Item guard: refuse creative items with huge or deeply nested
 
 
 diff --git a/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
-index f936da2a1ffef5fd84d8d63be3575fd06ac9a7b2..8f436ae7287e144cf70a6988d2cd287e19e76f78 100755
+index 6ad11a3c68fed400ab03062598d25f87be9df348..28cbff778d51c5f19450ef156d8054b913346482 100755
 --- a/net/minecraft/server/network/ServerGamePacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
-@@ -3482,6 +3482,14 @@ public class ServerGamePacketListenerImpl
+@@ -3483,6 +3483,14 @@ public class ServerGamePacketListenerImpl
              if (!itemStack.isItemEnabled(this.player.level().enabledFeatures())) {
                  return;
              }

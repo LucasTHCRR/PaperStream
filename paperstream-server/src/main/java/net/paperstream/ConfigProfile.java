@@ -13,6 +13,7 @@ public enum ConfigProfile {
     LOW("low", "Light touch, close to Paper: only the optimizations nobody notices in game."),
     MEDIUM("medium", "Balanced, the defaults."),
     PERFORMANCE("performance", "For weak servers (2-4 cores): saves the most CPU, keeps MSPT flat, chunks load a bit slower."),
+    PERFORMANCE_BETA("performance-beta", "Like performance, plus new optimizations that do not change gameplay but are still in testing."),
     CUSTOM("custom", "Nothing is changed, every value comes from the file.");
 
     public final String id;
@@ -65,6 +66,8 @@ public enum ConfigProfile {
         v.put("entities.item-piles.max-per-block", 64);
         v.put("chunks.worker-priority.nice", 5);
         v.put("chunks.lag-generation-factor", 0.5D);
+        v.put("beta.sleeping-hoppers.enabled", this == PERFORMANCE_BETA);
+        v.put("beta.skip-unchanged-chunk-saves.enabled", this == PERFORMANCE_BETA);
         switch (this) {
             case LOW -> {
                 v.put("entities.tick-throttle.near-distance", 48.0D);
@@ -80,7 +83,7 @@ public enum ConfigProfile {
                 v.put("chunks.worker-priority.nice", 0);
                 v.put("chunks.lag-generation-factor", 1.0D);
             }
-            case PERFORMANCE -> {
+            case PERFORMANCE, PERFORMANCE_BETA -> {
                 v.put("chunks.generation-boost", 1.0D);
                 v.put("chunks.send-budget-ms", 2.0D);
                 v.put("entities.tick-throttle.near-distance", 24.0D);
@@ -111,7 +114,7 @@ public enum ConfigProfile {
      */
     public int workerThreads(final int cores) {
         return switch (this) {
-            case PERFORMANCE -> Math.max(1, (cores - 2) / 2);
+            case PERFORMANCE, PERFORMANCE_BETA -> Math.max(1, (cores - 2) / 2);
             default -> Math.max(1, Math.min(16, cores - 2));
         };
     }

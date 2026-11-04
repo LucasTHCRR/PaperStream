@@ -73,5 +73,15 @@ public final class PaperStream {
         io.papermc.paper.FeatureHooks.applyPlayerChunkUnloadDelay();
         LOGGER.info("PaperStream: profile {}, region compression {}, directional loading {}, prefetch {}",
             PaperStreamConfig.profile.id, compression, PaperStreamConfig.directionalLoading, PaperStreamConfig.prefetch);
+        final java.util.List<String> beta = new java.util.ArrayList<>();
+        if (PaperStreamConfig.sleepingHoppers) {
+            beta.add("sleeping hoppers");
+        }
+        if (PaperStreamConfig.skipUnchangedChunkSaves) {
+            beta.add("skip unchanged chunk saves");
+        }
+        if (!beta.isEmpty()) {
+            LOGGER.info("PaperStream beta optimizations active: {}. If something behaves oddly, turn them off under beta in paperstream.yml and report it.", String.join(", ", beta));
+        }
     }
 }
