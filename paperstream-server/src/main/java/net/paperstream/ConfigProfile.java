@@ -67,6 +67,7 @@ public enum ConfigProfile {
         v.put("chunks.worker-priority.nice", 5);
         v.put("chunks.lag-generation-factor", 0.5D);
         v.put("beta.sleeping-hoppers.enabled", this == PERFORMANCE_BETA);
+        v.put("beta.skip-unchanged-chunk-saves.enabled", this == PERFORMANCE_BETA);
         switch (this) {
             case LOW -> {
                 v.put("entities.tick-throttle.near-distance", 48.0D);

@@ -6,10 +6,10 @@ Subject: [PATCH] Chunk unloading in paperstream.yml: unload delay (30 s by
 
 
 diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-index 76f990f150f040b1ad6d7d5b91cfb34ebd6f436a..a1f84d24d20cb96c665af8581902bc0c03015673 100755
+index 26e252d229dd1a63afa70b41299bc92fc367afdf..cf154b8bae32042d2d13c950c5dc657467e6d636 100755
 --- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
 +++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-@@ -209,12 +209,14 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
+@@ -220,12 +220,14 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
  
      @Override
      public int configMinChunkUnloadCount(final ServerLevel world) {

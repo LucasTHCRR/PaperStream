@@ -6,10 +6,10 @@ Subject: [PATCH] Sleeping hoppers: skip hoppers with nothing to move until
 
 
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index e21b92518938ff3e179485802fd77e6735de2cd4..a844e508ea5a2d220a59fa638e4718b5316badf9 100755
+index 704fa150b41853173b37b4cb5903e5a61e0abdd3..f0c329fa6e327ce889b27bad7d54ebda07c0adf9 100755
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -5188,6 +5188,9 @@ public abstract class Entity
+@@ -5194,6 +5194,9 @@ public abstract class Entity
              if (fx != this.blockPosition.getX() || fy != this.blockPosition.getY() || fz != this.blockPosition.getZ()) {
                  this.blockPosition = new BlockPos(fx, fy, fz);
                  this.inBlockState = null;

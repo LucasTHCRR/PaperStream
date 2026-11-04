@@ -5,10 +5,10 @@ Subject: [PATCH] Memory: unload brake when the live heap is nearly full
 
 
 diff --git a/ca/spottedleaf/moonrise/paper/PaperHooks.java b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-index a1f84d24d20cb96c665af8581902bc0c03015673..69cb60ff86c57517f32181406950672d10a12823 100755
+index cf154b8bae32042d2d13c950c5dc657467e6d636..e6ff9ba77d26a2d05ea8d7631fa412d3d77a34f4 100755
 --- a/ca/spottedleaf/moonrise/paper/PaperHooks.java
 +++ b/ca/spottedleaf/moonrise/paper/PaperHooks.java
-@@ -210,13 +210,15 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
+@@ -221,13 +221,15 @@ public final class PaperHooks extends BaseChunkSystemHooks implements PlatformHo
      @Override
      public int configMinChunkUnloadCount(final ServerLevel world) {
          // PaperStream - configurable unload rate: a value from paperstream.yml other than Paper's default wins over paper-world-defaults.yml

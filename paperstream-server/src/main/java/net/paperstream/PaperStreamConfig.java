@@ -123,6 +123,9 @@ public final class PaperStreamConfig {
     public static boolean sleepingHoppers = false;
     public static int sleepingHoppersMaxTicks = 20;
 
+    // beta.skip-unchanged-chunk-saves
+    public static boolean skipUnchangedChunkSaves = false;
+
     // world.hide-seed
     public static boolean hideSeed = false;
     public static long hideSeedSecret = 0L;
@@ -326,6 +329,8 @@ public final class PaperStreamConfig {
             "Beta. Hoppers with nothing to move sleep instead of checking every tick. Their inventory, neighbor blocks, redstone and items or container minecarts coming close wake them right away. Turned on by the profile performance-beta.");
         sleepingHoppersMaxTicks = integer(yaml, "beta.sleeping-hoppers.max-sleep-ticks", sleepingHoppersMaxTicks,
             "Longest sleep in ticks. Covers plugins that change a container without telling the world.");
+        skipUnchangedChunkSaves = bool(yaml, "beta.skip-unchanged-chunk-saves.enabled", skipUnchangedChunkSaves,
+            "Beta. Chunks loaded from disk that nobody changed are not written again on unload or autosave. Saves main thread time and disk writes when players fly around. Turned on by the profile performance-beta.");
         hideSeed = bool(yaml, "world.hide-seed.enabled", hideSeed,
             "Against seed cracking mods: players get a fake seed hash, and ores and other decorations are placed with a secret seed. A cracked seed then shows wrong ore positions. Only chunks generated from now on are protected.");
         init(yaml, "world.hide-seed.secret", 0L,

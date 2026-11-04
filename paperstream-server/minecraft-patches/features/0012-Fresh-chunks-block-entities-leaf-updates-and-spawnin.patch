@@ -47,7 +47,7 @@ index dff257716d405188cc1674d13c4b0f03c6d099de..61ab242ce2e929c6dd8ecbf20d507b53
              // PaperStream end - redstone clock guard
              state.tick(this, pos, this.random);
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index 5cc94652112c67ca4e7ae6e8b324e9c9f8908d7d..e21b92518938ff3e179485802fd77e6735de2cd4 100755
+index bea975af0b8be42883bac92d0366cf93ebadc0fc..704fa150b41853173b37b4cb5903e5a61e0abdd3 100755
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
 @@ -379,6 +379,7 @@ public abstract class Entity
@@ -58,7 +58,7 @@ index 5cc94652112c67ca4e7ae6e8b324e9c9f8908d7d..e21b92518938ff3e179485802fd77e67
      // Paper start
      public @Nullable Vec3 origin;
      public @Nullable UUID originWorld;
-@@ -2939,6 +2940,7 @@ public abstract class Entity
+@@ -2945,6 +2946,7 @@ public abstract class Entity
              }
  
              spawnedViaMobSpawner = input.getBooleanOr("Paper.FromMobSpawner", false); // Restore entity's from mob spawner status
