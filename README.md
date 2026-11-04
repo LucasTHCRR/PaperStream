@@ -47,6 +47,7 @@ One line in `paperstream.yml` sets everything above at once:
 | `low` | close to Paper, only changes nobody notices in game |
 | `medium` | balanced, the default |
 | `performance` | weak servers with 2 to 4 cores, saves the most CPU, chunks load a bit slower |
+| `performance-beta` | like `performance`, plus new optimizations that are still in testing (26.3 only): sleeping hoppers, skip saving unchanged chunks |
 | `custom` | nothing is changed, every value comes from the file |
 
 Switch live with `/paperstream profile <name>`. A profile writes its values into the file once, every value can still be changed by hand afterwards.
@@ -86,7 +87,7 @@ Server jars are on the [releases page](https://github.com/LucasTHCRR/PaperStream
 
 | Minecraft | Jar | Java |
 |---|---|---|
-| 26.3 | `paperstream-26.3-alpha.3.jar` | 25 |
+| 26.3 | `paperstream-26.3-beta.1.jar` | 25 |
 | 26.2 | `paperstream-26.2-alpha.3.jar` | 25 |
 | 1.21.11 | `paperstream-1.21.11-alpha.3.jar` | 21 |
 
