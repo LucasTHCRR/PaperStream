@@ -1,0 +1,540 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Thu, 5 Nov 2026 06:55:44 +0100
+Subject: [PATCH] Backport Moonrise fixes and chunk system improvements from
+ 26.3
+
+- Region file I/O no longer deep copies the chunk NBT for every read callback
+- Unloading chunks serialises their sections without copying them first
+- The full chunk task loads the entity chunk without entering the ticket lock
+- Delayed ticket updates lock each lock region once instead of once per ticket
+- Unloaded chunk holders are removed from the broadcast set
+- Async ticket update check was inverted
+- Villagers only consider POIs within vanilla's 48 block radius (Moonrise #223)
+- The player chunk loader iterates in euclidean order again
+- IntegerProperty id lookup clamps against max - min
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java b/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
+index 3bb9b58ee97464687e348e23b99159226415c267..e9dc38d934ede23f17e18893ee207d9fbbd26449 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
+@@ -790,6 +790,9 @@ public final class MoonriseRegionFileIO {
+             if (pendingWrite == null) {
+                 // need to add to waiters here, because the regionfile thread will use compute() to lock and check for cancellations
+                 if (!running.inProgressRead.addToAsyncWaiters(onComplete)) {
++                    if (!running.inProgressRead.written) {
++                        throw new IllegalStateException("In progress read is add-blocked but data is not written");
++                    }
+                     callbackInfo.data = running.inProgressRead.value;
+                     callbackInfo.throwable = running.inProgressRead.throwable;
+                     callbackInfo.completeNow = true;
+@@ -824,7 +827,8 @@ public final class MoonriseRegionFileIO {
+             ret.scheduleReadIO();
+         } else if (callbackInfo.completeNow) {
+             try {
+-                onComplete.accept(callbackInfo.data == null ? null : callbackInfo.data.copy(), callbackInfo.throwable);
++                final boolean copy = !(onComplete instanceof NoCopyNBTData);
++                onComplete.accept(callbackInfo.data == null ? null : (copy ? callbackInfo.data.copy() : callbackInfo.data), callbackInfo.throwable);
+             } catch (final Throwable thr) {
+                 LOGGER.error("Callback " + ConcurrentUtil.genericToString(onComplete) + " synchronously failed to handle chunk data for task " + ret.toString(), thr);
+             }
+@@ -1092,6 +1096,7 @@ public final class MoonriseRegionFileIO {
+                 // further synchronisation.
+             }
+ 
++            final boolean cancelledWrite;
+             if (canRead[0]) {
+                 RegionDataController.ReadData readData = null;
+                 Throwable throwable = null;
+@@ -1104,12 +1109,12 @@ public final class MoonriseRegionFileIO {
+                 }
+ 
+                 if (throwable != null) {
+-                    this.finishRead(null, throwable);
++                    cancelledWrite = this.finishRead(null, throwable);
+                 } else {
+                     switch (readData.result()) {
+                         case NO_DATA:
+                         case SYNC_READ: {
+-                            this.finishRead(readData.syncRead(), null);
++                            cancelledWrite = this.finishRead(readData.syncRead(), null);
+                             break;
+                         }
+                         case HAS_DATA: {
+@@ -1123,9 +1128,11 @@ public final class MoonriseRegionFileIO {
+                         }
+                     }
+                 }
++            } else {
++                cancelledWrite = this.tryAbortWrite();
+             }
+ 
+-            if (!this.tryAbortWrite()) {
++            if (!cancelledWrite) {
+                 this.scheduleWriteCompress();
+             }
+         }
+@@ -1159,14 +1166,45 @@ public final class MoonriseRegionFileIO {
+                 return;
+             }
+ 
+-            this.finishRead(compoundTag, throwable);
+-            if (!this.tryAbortWrite()) {
++            final boolean cancelledWrite = this.finishRead(compoundTag, throwable);
++            if (!cancelledWrite) {
+                 this.scheduleWriteCompress();
+             }
+         }
+ 
+-        private void finishRead(final CompoundTag compoundTag, final Throwable throwable) {
+-            this.inProgressRead.complete(this, compoundTag, throwable);
++        private boolean finishRead(final CompoundTag compoundTag, final Throwable throwable) {
++            final long chunkKey = CoordinateUtils.getChunkKey(this.chunkX, this.chunkZ);
++
++            final boolean[] canSingleComplete = new boolean[1];
++            final ChunkIOTask inMap = this.regionDataController.chunkTasks.compute(chunkKey, (final long keyInMap, final ChunkIOTask valueInMap) -> {
++                if (valueInMap == null) {
++                    throw new IllegalStateException("Read/write completed concurrently, expected this task: " + ChunkIOTask.this.toString() + ", report this!");
++                }
++                if (valueInMap != ChunkIOTask.this) {
++                    throw new IllegalStateException("Chunk task mismatch, expected this task: " + ChunkIOTask.this.toString() + ", got: " + valueInMap.toString() + ", report this!");
++                }
++
++                canSingleComplete[0] = valueInMap.inProgressRead.hasAtMostOneCallback();
++
++                if (valueInMap.inProgressWrite != null) {
++                    return valueInMap;
++                }
++
++                return null;
++            });
++
++            if (canSingleComplete[0]) {
++                this.inProgressRead.completeOne(this, compoundTag, throwable);
++            } else {
++                this.inProgressRead.complete(this, compoundTag, throwable);
++            }
++
++            if (inMap == null) {
++                this.regionDataController.endTask(this);
++                return true; // set the task value to null, indicating we're done
++            }
++            // else: inProgressWrite is present, indicating we need to write a value
++            return false;
+         }
+ 
+         public void scheduleWriteCompress() {
+@@ -1180,7 +1218,7 @@ public final class MoonriseRegionFileIO {
+                 this.currentTask = task;
+             }
+ 
+-            inProgressWrite.addToWaiters(this, (final CompoundTag data, final Throwable throwable) -> {
++            inProgressWrite.addToWaiters(this, (BiConsumer<CompoundTag, Throwable> & NoCopyNBTData) (final CompoundTag data, final Throwable throwable) -> {
+                 task.queue();
+             });
+         }
+@@ -1330,6 +1368,7 @@ public final class MoonriseRegionFileIO {
+ 
+             private static final Logger LOGGER = LoggerFactory.getLogger(InProgressRead.class);
+ 
++            private boolean written;
+             private CompoundTag value;
+             private Throwable throwable;
+             private final MultiThreadedQueue<BiConsumer<CompoundTag, Throwable>> callbacks = new MultiThreadedQueue<>();
+@@ -1346,17 +1385,44 @@ public final class MoonriseRegionFileIO {
+                 return this.callbacks.remove(callback);
+             }
+ 
++            public boolean hasAtMostOneCallback() {
++                return this.callbacks.size() <= 1;
++            }
++
++            public void completeOne(final ChunkIOTask task, final CompoundTag value, final Throwable throwable) {
++                // since the task is either cancelled (removed) or has an in-progress write,
++                // we can guarantee that the read data is only used by one consumer - eliminating
++                // the need to copy
++
++                this.callbacks.preventAdds();
++
++                final BiConsumer<CompoundTag, Throwable> consumer = this.callbacks.poll();
++                if (consumer != null) {
++                    this.completeConsumer(task, consumer, value, throwable);
++
++                    if (!this.callbacks.isEmpty()) {
++                        throw new IllegalStateException("Expected only one callback");
++                    }
++                } // else: add blocked, we are done here
++            }
++
++            private void completeConsumer(final ChunkIOTask task, final BiConsumer<CompoundTag, Throwable> consumer, final CompoundTag value, final Throwable throwable) {
++                try {
++                    consumer.accept(value, throwable);
++                } catch (final Throwable thr) {
++                    LOGGER.error("Callback " + ConcurrentUtil.genericToString(consumer) + " failed to handle chunk data (read) for task " + task.toString(), thr);
++                }
++            }
++
+             public void complete(final ChunkIOTask task, final CompoundTag value, final Throwable throwable) {
+                 this.value = value;
+                 this.throwable = throwable;
++                this.written = true;
+ 
+                 BiConsumer<CompoundTag, Throwable> consumer;
+                 while ((consumer = this.callbacks.pollOrBlockAdds()) != null) {
+-                    try {
+-                        consumer.accept(value == null ? null : value.copy(), throwable);
+-                    } catch (final Throwable thr) {
+-                        LOGGER.error("Callback " + ConcurrentUtil.genericToString(consumer) + " failed to handle chunk data (read) for task " + task.toString(), thr);
+-                    }
++                    final boolean copy = !(consumer instanceof NoCopyNBTData);
++                    this.completeConsumer(task, consumer, value == null ? null : (copy ? value.copy() : value), throwable);
+                 }
+             }
+         }
+@@ -1398,7 +1464,8 @@ public final class MoonriseRegionFileIO {
+ 
+             private void syncAccept(final ChunkIOTask task, final BiConsumer<CompoundTag, Throwable> consumer, final CompoundTag value, final Throwable throwable) {
+                 try {
+-                    consumer.accept(value == null ? null : value.copy(), throwable);
++                    final boolean copy = !(consumer instanceof NoCopyNBTData);
++                    consumer.accept(value == null ? null : (copy ? value.copy() : value), throwable);
+                 } catch (final Throwable thr) {
+                     LOGGER.error("Callback " + ConcurrentUtil.genericToString(consumer) + " failed to handle chunk data (write) for task " + task.toString(), thr);
+                 }
+@@ -1423,6 +1490,12 @@ public final class MoonriseRegionFileIO {
+         }
+     }
+ 
++    /**
++     * Use on callbacks indicating that the NBT data input is never modified. The callback is invoked
++     * with uncopied data.
++     */
++    public static interface NoCopyNBTData {}
++
+     public static abstract class RegionDataController {
+ 
+         public final RegionFileType type;
+@@ -1474,7 +1547,9 @@ public final class MoonriseRegionFileIO {
+ 
+         public abstract void finishWrite(final int chunkX, final int chunkZ, final WriteData writeData) throws IOException;
+ 
+-        public static record ReadData(ReadResult result, DataInputStream input, CompoundTag syncRead, int recalculateCount) { // Paper - Attempt to recalculate regionfile header if it is corrupt
++        // recalculateCount is the regionfile's header recalculation count at the time of the read, used to detect
++        // whether the header was recalculated between readData() and finishRead()
++        public static record ReadData(ReadResult result, DataInputStream input, CompoundTag syncRead, int recalculateCount) {
+             public static enum ReadResult {
+                 NO_DATA,
+                 HAS_DATA,
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java
+index e418820359c430b91bb91eb65d137b9cdbe2db4b..d3bd7030fb651c74df4f087c67b1200d4c8fa235 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkHolderManager.java
+@@ -21,6 +21,7 @@ import ca.spottedleaf.moonrise.patches.chunk_system.ticket.ChunkSystemTicket;
+ import ca.spottedleaf.moonrise.patches.chunk_system.ticket.ChunkSystemTicketType;
+ import ca.spottedleaf.moonrise.patches.chunk_system.util.ChunkSystemSortedArraySet;
+ import ca.spottedleaf.moonrise.patches.chunk_system.util.stream.TicketSet;
++import ca.spottedleaf.moonrise.patches.chunk_system.world.ChunkSystemServerChunkCache;
+ import com.google.gson.JsonArray;
+ import com.google.gson.JsonObject;
+ import com.mojang.logging.LogUtils;
+@@ -732,19 +733,32 @@ public final class ChunkHolderManager {
+     // atomic with respect to all add/remove/addandremove ticket calls for the given chunk
+     public <T, V> void addAndRemoveTickets(final long chunk, final TicketType addType, final int addLevel, final T addIdentifier,
+                                            final TicketType removeType, final int removeLevel, final V removeIdentifier) {
+-        final ReentrantAreaLock.Node ticketLock = this.ticketLockArea.lock(CoordinateUtils.getChunkX(chunk), CoordinateUtils.getChunkZ(chunk));
++        this.addAndRemoveTickets(chunk, addType, addLevel, addIdentifier, removeType, removeLevel, removeIdentifier, true);
++    }
++
++    private <T, V> void addAndRemoveTickets(final long chunk, final TicketType addType, final int addLevel, final T addIdentifier,
++                                           final TicketType removeType, final int removeLevel, final V removeIdentifier, final boolean lock) {
++        final ReentrantAreaLock.Node ticketLock = !lock ? null : this.ticketLockArea.lock(CoordinateUtils.getChunkX(chunk), CoordinateUtils.getChunkZ(chunk));
+         try {
+             this.addTicketAtLevel(addType, chunk, addLevel, addIdentifier, false);
+             this.removeTicketAtLevel(removeType, chunk, removeLevel, removeIdentifier, false);
+         } finally {
+-            this.ticketLockArea.unlock(ticketLock);
++            if (ticketLock != null) {
++                this.ticketLockArea.unlock(ticketLock);
++            }
+         }
+     }
+ 
+     // atomic with respect to all add/remove/addandremove ticket calls for the given chunk
+     public <T, V> boolean addIfRemovedTicket(final long chunk, final TicketType addType, final int addLevel, final T addIdentifier,
+                                              final TicketType removeType, final int removeLevel, final V removeIdentifier) {
+-        final ReentrantAreaLock.Node ticketLock = this.ticketLockArea.lock(CoordinateUtils.getChunkX(chunk), CoordinateUtils.getChunkZ(chunk));
++        return this.addIfRemovedTicket(chunk, addType, addLevel, addIdentifier, removeType, removeLevel, removeIdentifier, true);
++    }
++
++    private <T, V> boolean addIfRemovedTicket(final long chunk, final TicketType addType, final int addLevel, final T addIdentifier,
++                                              final TicketType removeType, final int removeLevel, final V removeIdentifier,
++                                              final boolean lock) {
++        final ReentrantAreaLock.Node ticketLock = !lock ? null : this.ticketLockArea.lock(CoordinateUtils.getChunkX(chunk), CoordinateUtils.getChunkZ(chunk));
+         try {
+             if (this.removeTicketAtLevel(removeType, chunk, removeLevel, removeIdentifier, false)) {
+                 this.addTicketAtLevel(addType, chunk, addLevel, addIdentifier, false);
+@@ -979,6 +993,29 @@ public final class ChunkHolderManager {
+         return current;
+     }
+ 
++    // note: only call from the ChunkFullTask
++    // this allows us to avoid checking if the entity NBT is loaded which avoids entering the ticket/scheduling lock
++    public ChunkEntitySlices fullTaskLoadEntityChunk(final int chunkX, final int chunkZ) {
++        TickThread.ensureTickThread(this.world, chunkX, chunkZ, "Cannot create entity chunk off-main");
++        ChunkEntitySlices ret;
++
++        NewChunkHolder current = this.getChunkHolder(chunkX, chunkZ);
++
++        if (current != null && (ret = current.getEntityChunk()) != null && !ret.isTransient()) {
++            LOGGER.error("Unexpected non-transient entity chunk at "  + new ChunkPos(chunkX, chunkZ));
++            return ret;
++        }
++
++        if (current == null || !current.isEntityChunkNBTLoaded()) {
++            LOGGER.error("NBT for entity chunk is unexpectedly not loaded at "  + new ChunkPos(chunkX, chunkZ));
++            return this.getOrCreateEntityChunk(chunkX, chunkZ, false);
++        }
++
++        ret = current.loadInEntityChunk(false);
++
++        return ret;
++    }
++
+     public ChunkEntitySlices getOrCreateEntityChunk(final int chunkX, final int chunkZ, final boolean transientChunk) {
+         TickThread.ensureTickThread(this.world, chunkX, chunkZ, "Cannot create entity chunk off-main");
+         ChunkEntitySlices ret;
+@@ -1144,6 +1181,7 @@ public final class ChunkHolderManager {
+     private void removeChunkHolder(final NewChunkHolder holder) {
+         holder.onUnload();
+         this.autoSaveQueue.remove(holder);
++        ((ChunkSystemServerChunkCache)this.world.getChunkSource()).moonrise$chunkHolderUnload(holder);
+         PlatformHooks.get().onChunkHolderDelete(this.world, holder.vanillaChunkHolder);
+         this.chunkHolders.remove(CoordinateUtils.getChunkKey(holder.chunkX, holder.chunkZ));
+     }
+@@ -1362,42 +1400,67 @@ public final class ChunkHolderManager {
+         }
+     }
+ 
+-    private <T, V> boolean processTicketOp(TicketOperation<T, V> operation) {
+-        boolean ret = false;
++    private <T, V> boolean processTicketOp(final TicketOperation<T, V> operation, final boolean lock) {
+         switch (operation.op) {
+             case ADD: {
+-                ret |= this.addTicketAtLevel(operation.ticketType, operation.chunkCoord, operation.ticketLevel, operation.identifier);
+-                break;
++                return this.addTicketAtLevel(operation.ticketType, operation.chunkCoord, operation.ticketLevel, operation.identifier, lock);
+             }
+             case REMOVE: {
+-                ret |= this.removeTicketAtLevel(operation.ticketType, operation.chunkCoord, operation.ticketLevel, operation.identifier);
+-                break;
++                return this.removeTicketAtLevel(operation.ticketType, operation.chunkCoord, operation.ticketLevel, operation.identifier, lock);
+             }
+             case ADD_IF_REMOVED: {
+-                ret |= this.addIfRemovedTicket(
++                return this.addIfRemovedTicket(
+                     operation.chunkCoord,
+                     operation.ticketType, operation.ticketLevel, operation.identifier,
+-                    operation.ticketType2, operation.ticketLevel2, operation.identifier2
++                    operation.ticketType2, operation.ticketLevel2, operation.identifier2,
++                    lock
+                 );
+-                break;
+             }
+             case ADD_AND_REMOVE: {
+-                ret = true;
+                 this.addAndRemoveTickets(
+                     operation.chunkCoord,
+                     operation.ticketType, operation.ticketLevel, operation.identifier,
+-                    operation.ticketType2, operation.ticketLevel2, operation.identifier2
++                    operation.ticketType2, operation.ticketLevel2, operation.identifier2,
++                    lock
+                 );
+-                break;
++                return true;
++            }
++            default: {
++                throw new IllegalStateException("Unknown operation: " + operation.op);
+             }
+         }
+-
+-        return ret;
+     }
+ 
+     public void performTicketUpdates(final Collection<TicketOperation<?, ?>> operations) {
++        final Long2ObjectOpenHashMap<List<TicketOperation<?, ?>>> operationsBySection = new Long2ObjectOpenHashMap<>();
++        final int sectionShift = this.ticketLockArea.coordinateShift;
++
+         for (final TicketOperation<?, ?> operation : operations) {
+-            this.processTicketOp(operation);
++            final int sectionX = CoordinateUtils.getChunkX(operation.chunkCoord) >> sectionShift;
++            final int sectionZ = CoordinateUtils.getChunkZ(operation.chunkCoord) >> sectionShift;
++
++            final long key = CoordinateUtils.getChunkKey(sectionX, sectionZ);
++
++            operationsBySection.computeIfAbsent(key, (k) -> new ArrayList<>())
++                .add(operation);
++        }
++
++        for (final Iterator<Long2ObjectMap.Entry<List<TicketOperation<?, ?>>>> iterator = operationsBySection.long2ObjectEntrySet().fastIterator(); iterator.hasNext();) {
++            final Long2ObjectMap.Entry<List<TicketOperation<?, ?>>> entry = iterator.next();
++
++            final long key = entry.getLongKey();
++            final List<TicketOperation<?, ?>> sectionOps = entry.getValue();
++
++            final ReentrantAreaLock.Node ticketLock = this.ticketLockArea.lock(
++                CoordinateUtils.getChunkX(key) << sectionShift, CoordinateUtils.getChunkZ(key) << sectionShift
++            );
++            try {
++                for (final TicketOperation<?, ?> operation : sectionOps) {
++                    this.processTicketOp(operation, false);
++                }
++            } finally {
++                this.ticketLockArea.unlock(ticketLock);
++            }
+         }
+     }
+ 
+@@ -1421,7 +1484,7 @@ public final class ChunkHolderManager {
+         }
+         final boolean isTickThread = TickThread.isTickThread();
+ 
+-        if (!PlatformHooks.get().allowAsyncTicketUpdates() && isTickThread) {
++        if (!PlatformHooks.get().allowAsyncTicketUpdates() && !isTickThread) {
+             TickThread.ensureTickThread("Cannot asynchronously process ticket updates");
+         }
+ 
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/NewChunkHolder.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/NewChunkHolder.java
+index 9a9a599ef178f851ee5c783631a724013a693586..7a0006f9b56d1e43b06f9f7452e1b5bb0ec53e72 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/NewChunkHolder.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/NewChunkHolder.java
+@@ -1703,12 +1703,23 @@ public final class NewChunkHolder {
+                 : null;
+     }
+ 
++    public static final ThreadLocal<Boolean> DO_NOT_COPY_SAVED_DATA = ThreadLocal.withInitial(() -> {
++        return Boolean.FALSE;
++    });
++
+     private boolean saveChunk(final ChunkAccess chunk, final boolean unloading, final Completable<CompoundTag>[] chunkSave) {
+         if (!chunk.isUnsaved()) {
+             return false;
+         }
+         try {
+-            final SerializableChunkData chunkData = SerializableChunkData.copyOf(this.world, chunk);
++            final SerializableChunkData chunkData;
++
++            DO_NOT_COPY_SAVED_DATA.set(Boolean.valueOf(unloading));
++            try {
++                chunkData = SerializableChunkData.copyOf(this.world, chunk);
++            } finally {
++                DO_NOT_COPY_SAVED_DATA.set(Boolean.FALSE);
++            }
+             PlatformHooks.get().chunkSyncSave(this.world, chunk, chunkData);
+ 
+             chunk.tryMarkSaved();
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkFullTask.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkFullTask.java
+index 96ccb8f657d755b2e58a8dd0cda00ca0df4886b2..f41b3247df8c3e088f253d40a333fac73cfd54e3 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkFullTask.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkFullTask.java
+@@ -77,11 +77,11 @@ public final class ChunkFullTask extends ChunkProgressionTask implements Runnabl
+             chunk.setFullStatus(chunkHolder::getChunkStatus);
+             try {
+                 platformHooks.setCurrentlyLoading(this.chunkHolder.vanillaChunkHolder, chunk);
+-                chunk.runPostLoad();
+                 // Unlike Vanilla, we load the entity chunk here, as we load the NBT in empty status (unlike Vanilla)
+                 // This brings entity addition back in line with older versions of the game
+                 // Since we load the NBT in the empty status, this will never block for I/O
+-                ((ChunkSystemServerLevel)this.world).moonrise$getChunkTaskScheduler().chunkHolderManager.getOrCreateEntityChunk(this.chunkX, this.chunkZ, false);
++                ((ChunkSystemServerLevel)this.world).moonrise$getChunkTaskScheduler().chunkHolderManager.fullTaskLoadEntityChunk(this.chunkX, this.chunkZ);
++                chunk.runPostLoad();
+                 chunk.setLoaded(true);
+                 chunk.registerAllBlockEntitiesAfterLevelLoad();
+                 chunk.registerTickContainerInLevel(this.world);
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/util/ParallelSearchRadiusIteration.java b/ca/spottedleaf/moonrise/patches/chunk_system/util/ParallelSearchRadiusIteration.java
+index 28d796a3fddebf0bb25ba759969aadecc5a6a2de..4e7138bce3b479f7013e929c870f69bfd775fcb9 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/util/ParallelSearchRadiusIteration.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/util/ParallelSearchRadiusIteration.java
+@@ -62,7 +62,7 @@ public final class ParallelSearchRadiusIteration {
+     }
+ 
+     public static long[] getEuclideanIteration(final int radius) {
+-        return SEARCH_RADIUS_ITERATION_LIST[radius];
++        return EUCLIDEAN_RADIUS_ITERATION_LIST[radius];
+     }
+ 
+     private static class CustomLongArray extends LongArrayList {
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/world/ChunkSystemServerChunkCache.java b/ca/spottedleaf/moonrise/patches/chunk_system/world/ChunkSystemServerChunkCache.java
+index 4b9e2fa963c14f65f15407c1814c543c2999ea32..8fac717c11769111b9c4750260b568d718f45500 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/world/ChunkSystemServerChunkCache.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/world/ChunkSystemServerChunkCache.java
+@@ -8,4 +8,6 @@ public interface ChunkSystemServerChunkCache {
+ 
+     public LevelChunk moonrise$getFullChunkIfLoaded(final int chunkX, final int chunkZ);
+ 
++    public void moonrise$chunkHolderUnload(final ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder chunkHolder);
++
+ }
+diff --git a/net/minecraft/server/level/ServerChunkCache.java b/net/minecraft/server/level/ServerChunkCache.java
+index 6b4c9b417202f21d3532642cad34aeabc2cc23ec..c40dada771f6446f156e950de97b8b6c8483a409 100755
+--- a/net/minecraft/server/level/ServerChunkCache.java
++++ b/net/minecraft/server/level/ServerChunkCache.java
+@@ -99,6 +99,11 @@ public class ServerChunkCache extends ChunkSource implements ca.spottedleaf.moon
+         return this.fullChunks.get(ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkKey(chunkX, chunkZ));
+     }
+ 
++    @Override
++    public void moonrise$chunkHolderUnload(final ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder chunkHolder) {
++        this.chunkHoldersToBroadcast.remove(chunkHolder.vanillaChunkHolder);
++    }
++
+     private ChunkAccess syncLoad(final int chunkX, final int chunkZ, final ChunkStatus toStatus) {
+         final ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler chunkTaskScheduler = ((ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel)this.level).moonrise$getChunkTaskScheduler();
+         final CompletableFuture<ChunkAccess> completable = new CompletableFuture<>();
+diff --git a/net/minecraft/world/entity/ai/behavior/AcquirePoi.java b/net/minecraft/world/entity/ai/behavior/AcquirePoi.java
+index e2eb02d8a0a9481be2308c9052582591bc4f9850..019a5cbef59465147cbc59e2b8580624cac379e8 100755
+--- a/net/minecraft/world/entity/ai/behavior/AcquirePoi.java
++++ b/net/minecraft/world/entity/ai/behavior/AcquirePoi.java
+@@ -96,7 +96,7 @@ public class AcquirePoi {
+                         };
+                         // Paper start - optimise POI searches
+                         java.util.List<Pair<Holder<PoiType>, BlockPos>> poiPositionsRaw = new java.util.ArrayList<>();
+-                        ca.spottedleaf.moonrise.patches.poi_lookup.PoiAccess.findNearestPoiPositions(poiManager, poiType, cacheTest, body.blockPosition(), SCAN_RANGE, Double.MAX_VALUE, PoiManager.Occupancy.HAS_SPACE, ca.spottedleaf.moonrise.patches.poi_lookup.PoiAccess.LOAD_FOR_SEARCHING, 5, poiPositionsRaw);
++                        ca.spottedleaf.moonrise.patches.poi_lookup.PoiAccess.findNearestPoiPositions(poiManager, poiType, cacheTest, body.blockPosition(), SCAN_RANGE, (double)((long)SCAN_RANGE * (long)SCAN_RANGE), PoiManager.Occupancy.HAS_SPACE, ca.spottedleaf.moonrise.patches.poi_lookup.PoiAccess.LOAD_FOR_SEARCHING, 5, poiPositionsRaw);
+                         Set<Pair<Holder<PoiType>, BlockPos>> poiPositions = new java.util.HashSet<>(poiPositionsRaw.size());
+                         for (Pair<Holder<PoiType>, BlockPos> pair : poiPositionsRaw) {
+                             if (validPoi.test(level, pair.getSecond())) {
+diff --git a/net/minecraft/world/level/block/state/properties/IntegerProperty.java b/net/minecraft/world/level/block/state/properties/IntegerProperty.java
+index 954e61059e07bf4bc36270d64c6aa513ecbabc26..8e89405ed73e68b641fd8a47963c60a1ccb1c907 100755
+--- a/net/minecraft/world/level/block/state/properties/IntegerProperty.java
++++ b/net/minecraft/world/level/block/state/properties/IntegerProperty.java
+@@ -16,7 +16,7 @@ public final class IntegerProperty extends Property<Integer> implements ca.spott
+         final int val = value.intValue();
+         final int ret = val - this.min;
+ 
+-        return ret | ((this.max - ret) >> 31);
++        return ret | ((this.max - this.min - ret) >> 31);
+     }
+ 
+     private void init() {
+diff --git a/net/minecraft/world/level/chunk/storage/SerializableChunkData.java b/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
+index 7d29fdc6548324d97ec34d476b5b48ec0bdba0d2..1cb1499a6759f97f4a2a785da8db6e24b413f8c1 100755
+--- a/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
++++ b/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
+@@ -455,6 +455,8 @@ public record SerializableChunkData(
+         final int maxLightSection = ca.spottedleaf.moonrise.common.util.WorldUtil.getMaxLightSection(level);
+         final int minBlockSection = ca.spottedleaf.moonrise.common.util.WorldUtil.getMinSection(level);
+ 
++        final boolean copy = !ca.spottedleaf.moonrise.patches.chunk_system.scheduling.NewChunkHolder.DO_NOT_COPY_SAVED_DATA.get().booleanValue();
++
+         final LevelChunkSection[] chunkSections = chunk.getSections();
+         final ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray[] blockNibbles = ((ca.spottedleaf.moonrise.patches.starlight.chunk.StarlightChunk)chunk).starlight$getBlockNibbles();
+         final ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray[] skyNibbles = ((ca.spottedleaf.moonrise.patches.starlight.chunk.StarlightChunk)chunk).starlight$getSkyNibbles();
+@@ -463,7 +465,7 @@ public record SerializableChunkData(
+             final int lightSectionIdx = lightSection - minLightSection;
+             final int blockSectionIdx = lightSection - minBlockSection;
+ 
+-            final LevelChunkSection chunkSection = (blockSectionIdx >= 0 && blockSectionIdx < chunkSections.length) ? chunkSections[blockSectionIdx].copy() : null;
++            final LevelChunkSection chunkSection = (blockSectionIdx >= 0 && blockSectionIdx < chunkSections.length) ? (copy ? chunkSections[blockSectionIdx].copy() : chunkSections[blockSectionIdx]) : null;
+             final ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray.SaveState blockNibble = blockNibbles[lightSectionIdx].getSaveState();
+             final ca.spottedleaf.moonrise.patches.starlight.light.SWMRNibbleArray.SaveState skyNibble = skyNibbles[lightSectionIdx].getSaveState();
+ 
