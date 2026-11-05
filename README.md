@@ -37,6 +37,7 @@ Documentation: [Wiki](https://github.com/LucasTHCRR/PaperStream/wiki)
 - **Lag protection**: a world that averages more than 45 ms per tick gets half the pathfinding budget and spawns mobs only every second tick, for that world only.
 - **Idle mode**: with nobody online, worlds tick once per second. Plugins keep running normally.
 - **Per world MSPT**: `/paperstream mspt` shows how long each world takes per tick.
+- **Seed hiding** (off by default): players get a fake seed hash, and ores and other decorations in new chunks are placed with a secret seed, so a cracked seed shows wrong ore positions.
 
 ### Profiles
 
@@ -87,10 +88,10 @@ Server jars are on the [releases page](https://github.com/LucasTHCRR/PaperStream
 
 | Minecraft | Jar | Java |
 |---|---|---|
-| 26.3 | `paperstream-26.3-beta.1.jar` | 25 |
-| 26.2 | `paperstream-26.2-beta.1.jar` | 25 |
-| 26.1 | `paperstream-26.1-beta.1.jar` | 25 |
-| 1.21.11 | `paperstream-1.21.11-beta.1.jar` | 21 |
+| 26.3 | `paperstream-26.3-beta.2.jar` | 25 |
+| 26.2 | `paperstream-26.2-beta.2.jar` | 25 |
+| 26.1 | `paperstream-26.1-beta.2.jar` | 25 |
+| 1.21.11 | `paperstream-1.21.11-beta.2.jar` | 21 |
 
 ## Building
 
