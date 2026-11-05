@@ -1,0 +1,128 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Thu, 5 Nov 2026 07:04:48 +0100
+Subject: [PATCH] Small Moonrise fixes from upstream
+
+- Region file cache only evicts after the region file is known to exist (Moonrise 4a5dfbf)
+- Region file reads compute the position as long, files over 2 GiB no longer overflow (Moonrise 2b1bea3)
+- Cache whether a block state is a special colliding block (Moonrise 42d5934)
+
+diff --git a/ca/spottedleaf/moonrise/patches/collisions/CollisionUtil.java b/ca/spottedleaf/moonrise/patches/collisions/CollisionUtil.java
+index 54b2492c3ab6bf9ff52cec53dc4635f725f9eb4f..11d4f2d5caba52b492b8e130faa4701f3980b0f1 100644
+--- a/ca/spottedleaf/moonrise/patches/collisions/CollisionUtil.java
++++ b/ca/spottedleaf/moonrise/patches/collisions/CollisionUtil.java
+@@ -51,7 +51,7 @@ public final class CollisionUtil {
+     public static final DoubleArrayList ZERO_ONE = DoubleArrayList.wrap(new double[] { 0.0, 1.0 });
+ 
+     public static boolean isSpecialCollidingBlock(final net.minecraft.world.level.block.state.BlockBehaviour.BlockStateBase block) {
+-        return block.hasLargeCollisionShape() || block.getBlock() == Blocks.MOVING_PISTON;
++        return ((CollisionBlockState)block).moonrise$isSpecialCollidingBlock();
+     }
+ 
+     public static boolean isEmpty(final AABB aabb) {
+diff --git a/ca/spottedleaf/moonrise/patches/collisions/block/CollisionBlockState.java b/ca/spottedleaf/moonrise/patches/collisions/block/CollisionBlockState.java
+index a38ab583200ebf68ca68fdddf2d12077720b72b7..f8c1667ae36c2221b8bcca53bd69d86d4d3191ef 100644
+--- a/ca/spottedleaf/moonrise/patches/collisions/block/CollisionBlockState.java
++++ b/ca/spottedleaf/moonrise/patches/collisions/block/CollisionBlockState.java
+@@ -26,4 +26,6 @@ public interface CollisionBlockState {
+     public int moonrise$uniqueId2();
+ 
+     public VoxelShape moonrise$getConstantContextCollisionShape();
++
++    public boolean moonrise$isSpecialCollidingBlock();
+ }
+diff --git a/net/minecraft/world/level/block/state/BlockBehaviour.java b/net/minecraft/world/level/block/state/BlockBehaviour.java
+index c78d77089e34c4bb559f173b449bfb7d91b05d5c..ddc2136cdbbd2339bccfe09ec8fec05c765ca71b 100755
+--- a/net/minecraft/world/level/block/state/BlockBehaviour.java
++++ b/net/minecraft/world/level/block/state/BlockBehaviour.java
+@@ -490,6 +490,17 @@ public abstract class BlockBehaviour implements FeatureElement {
+         private boolean emptyCollisionShape;
+         private boolean emptyConstantCollisionShape;
+         private VoxelShape constantCollisionShape;
++        private boolean isSpecialCollidingBlock;
++
++        private static boolean isSpecialCollidingBlock(final net.minecraft.world.level.block.state.BlockBehaviour.BlockStateBase block) {
++            // note: cannot reference Blocks here, as Blocks#<clinit> initialises the state caches in parallel
++            return block.hasLargeCollisionShape() || block.getBlock() instanceof net.minecraft.world.level.block.piston.MovingPistonBlock;
++        }
++
++        @Override
++        public final boolean moonrise$isSpecialCollidingBlock() {
++            return this.isSpecialCollidingBlock;
++        }
+ 
+         private static void initCaches(final VoxelShape shape, final boolean neighbours) {
+             ((ca.spottedleaf.moonrise.patches.collisions.shape.CollisionVoxelShape)shape).moonrise$isFullBlock();
+@@ -627,6 +638,7 @@ public abstract class BlockBehaviour implements FeatureElement {
+             this.isConditionallyFullOpaque = this.canOcclude & this.useShapeForLightOcclusion;
+             // Paper end - rewrite chunk system
+             // Paper start - optimise collisions
++            this.isSpecialCollidingBlock = isSpecialCollidingBlock(this);
+             if (this.cache != null) {
+                 final VoxelShape collisionShape = this.cache.collisionShape;
+                 if (this.isAir()) {
+diff --git a/net/minecraft/world/level/chunk/storage/RegionFile.java b/net/minecraft/world/level/chunk/storage/RegionFile.java
+index 3de7fd2b084c38e72d7a6bc416880a881f514ad3..1f41744d4e49ae8496ec2b936aeb194d5bedad87 100755
+--- a/net/minecraft/world/level/chunk/storage/RegionFile.java
++++ b/net/minecraft/world/level/chunk/storage/RegionFile.java
+@@ -464,7 +464,7 @@ public class RegionFile implements AutoCloseable, ca.spottedleaf.moonrise.patche
+                     if (numSectors == 255) {
+                         // We're maxed out, so we need to read the proper length from the section
+                         ByteBuffer realLen = ByteBuffer.allocate(4);
+-                        this.file.read(realLen, sectorNumber * 4096);
++                        this.file.read(realLen, sectorNumber * 4096L);
+                         numSectors = (realLen.getInt(0) + 4) / 4096 + 1;
+                     }
+                     // Spigot end
+@@ -573,13 +573,13 @@ public class RegionFile implements AutoCloseable, ca.spottedleaf.moonrise.patche
+         // Spigot start
+         if (numSectors == 255) {
+             ByteBuffer realLen = ByteBuffer.allocate(4);
+-            this.file.read(realLen, sectorNumber * 4096);
++            this.file.read(realLen, sectorNumber * 4096L);
+             numSectors = (realLen.getInt(0) + 4) / 4096 + 1;
+         }
+         // Spigot end
+         int sectorsLength = numSectors * 4096;
+         ByteBuffer buffer = ByteBuffer.allocate(sectorsLength);
+-        this.file.read(buffer, sectorNumber * 4096);
++        this.file.read(buffer, sectorNumber * 4096L);
+         buffer.flip();
+         if (buffer.remaining() < 5) {
+             LOGGER.error("Chunk {} header is truncated: expected {} but read {}", pos, sectorsLength, buffer.remaining());
+@@ -731,7 +731,7 @@ public class RegionFile implements AutoCloseable, ca.spottedleaf.moonrise.patche
+         ByteBuffer streamHeader = ByteBuffer.allocate(5);
+ 
+         try {
+-            this.file.read(streamHeader, sectorNumber * 4096);
++            this.file.read(streamHeader, sectorNumber * 4096L);
+             streamHeader.flip();
+             if (streamHeader.remaining() != 5) {
+                 return false;
+diff --git a/net/minecraft/world/level/chunk/storage/RegionFileStorage.java b/net/minecraft/world/level/chunk/storage/RegionFileStorage.java
+index 63b40c420030d935bb81a219fb33defe0946e21f..8827febdc9e64f89c8e28bcc1589e7facb594903 100755
+--- a/net/minecraft/world/level/chunk/storage/RegionFileStorage.java
++++ b/net/minecraft/world/level/chunk/storage/RegionFileStorage.java
+@@ -109,10 +109,6 @@ public class RegionFileStorage implements AutoCloseable, ca.spottedleaf.moonrise
+ 
+         final int cacheSize = io.papermc.paper.configuration.GlobalConfiguration.get() == null ? 256 : io.papermc.paper.configuration.GlobalConfiguration.get().misc.regionFileCacheSize; // Paper - Sanitise RegionFileCache and make configurable - Config not available during initial FileFixerUpper run
+ 
+-        if (this.regionCache.size() >= cacheSize) {
+-            this.regionCache.removeLast().close();
+-        }
+-
+         final Path regionPath = this.folder.resolve(getRegionFileName(chunkX, chunkZ));
+ 
+         if (!java.nio.file.Files.exists(regionPath)) {
+@@ -120,6 +116,11 @@ public class RegionFileStorage implements AutoCloseable, ca.spottedleaf.moonrise
+             return null;
+         }
+ 
++        // erst nach der Existenzpruefung verdraengen (Moonrise 4a5dfbf)
++        if (this.regionCache.size() >= cacheSize) {
++            this.regionCache.removeLast().close();
++        }
++
+         this.createRegionFile(key);
+ 
+         FileUtil.createDirectoriesSafe(this.folder);
