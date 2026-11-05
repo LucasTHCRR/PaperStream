@@ -91,8 +91,8 @@ Server jars are on the [releases page](https://github.com/LucasTHCRR/PaperStream
 |---|---|---|
 | 26.3 | `paperstream-26.3-beta.2.jar` | 25 |
 | 26.2 | `paperstream-26.2-beta.2.jar` | 25 |
-| 26.1 | `paperstream-26.1-beta.2.jar` | 25 |
-| 1.21.11 | `paperstream-1.21.11-beta.2.jar` | 21 |
+| 26.1 | `paperstream-26.1-beta.3.jar` | 25 |
+| 1.21.11 | `paperstream-1.21.11-beta.3.jar` | 21 |
 
 ## Building
 
