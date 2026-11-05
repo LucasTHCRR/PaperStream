@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Thu, 5 Nov 2026 06:53:41 +0100
+Subject: [PATCH] Logs: one file per day, restarts append after a start marker,
+ packed logs older than 30 days are deleted
+
+
+diff --git a/src/main/java/io/papermc/paper/PaperBootstrap.java b/src/main/java/io/papermc/paper/PaperBootstrap.java
+index d543b1b107ab8d3eeb1fc3c1cadf489928d2786e..f0ccb3f1f4942333e667c857a82dc64df9e54c96 100755
+--- a/src/main/java/io/papermc/paper/PaperBootstrap.java
++++ b/src/main/java/io/papermc/paper/PaperBootstrap.java
+@@ -16,6 +16,7 @@ public final class PaperBootstrap {
+     public static void boot(final OptionSet options) {
+         SharedConstants.tryDetectVersion();
+ 
++        LOGGER.info("==================== Server start ===================="); // PaperStream - Neustarts in der Tagesdatei finden
+         getStartupVersionMessages().forEach(LOGGER::info);
+ 
+         Main.main(options);
+diff --git a/src/main/resources/log4j2.xml b/src/main/resources/log4j2.xml
+index 4d881018248133d51661b45a087ebafdca62be8f..236673ce41e4a83d69b395a999133f4fbc9e36cf 100755
+--- a/src/main/resources/log4j2.xml
++++ b/src/main/resources/log4j2.xml
+@@ -25,9 +25,17 @@
+             </PatternLayout>
+             <Policies>
+                 <TimeBasedTriggeringPolicy />
+-                <OnStartupTriggeringPolicy />
++                <!-- PaperStream: eine Datei pro Tag, Neustarts haengen an. -Dpaperstream.log.rollOnStartBytes=1 = wieder eine Datei pro Start -->
++                <OnStartupTriggeringPolicy minSize="${sys:paperstream.log.rollOnStartBytes:-9223372036854775807}" />
++                <SizeBasedTriggeringPolicy size="${sys:paperstream.log.maxSize:-100 MB}" />
+             </Policies>
+-            <DefaultRolloverStrategy max="1000"/>
++            <DefaultRolloverStrategy max="1000">
++                <!-- PaperStream: gepackte Logs nach 30 Tagen loeschen, -Dpaperstream.log.keepDays aendert das -->
++                <Delete basePath="logs" maxDepth="1">
++                    <IfFileName glob="*.log.gz" />
++                    <IfLastModified age="${sys:paperstream.log.keepDays:-30}d" />
++                </Delete>
++            </DefaultRolloverStrategy>
+         </RollingRandomAccessFile>
+         <Async name="Async">
+             <AppenderRef ref="File"/>

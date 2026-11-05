@@ -66,6 +66,7 @@ All commands need `paperstream.command` (ops by default).
 |---|---|
 | `/paperstream info` | TPS, MSPT, RAM and what PaperStream is doing right now |
 | `/paperstream mspt` | milliseconds per tick for each world |
+| `/paperstream lag [world] [count]` | chunks with the most entities and ticking block entities (hoppers, furnaces, ...), with coordinates, to find laggy farms |
 | `/paperstream pregen <world> <radius in chunks> [x z]` | generate chunks ahead of time, pauses while the server lags (`stop`, `status`) |
 | `/paperstream reload` | reload `paperstream.yml` |
 | `/paperstream reload properties` | apply `server.properties` changes live (motd, max players, whitelist, difficulty, view and simulation distance, pvp, ...) |
