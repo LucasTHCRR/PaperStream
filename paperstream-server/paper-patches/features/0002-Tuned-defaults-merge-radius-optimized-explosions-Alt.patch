@@ -6,10 +6,10 @@ Subject: [PATCH] Tuned defaults: merge radius, optimized explosions, Alternate
 
 
 diff --git a/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java b/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
-index c710819bcd422f062a10127090ecfa6b222fe4f7..7b864f32fa8953478b3c335777c9e0675c56b4bb 100755
+index f5005cc53cf0b9f85006e403302d3610ee1cadc8..b1b34e19ff2c38b5af0a896179d303e510f50bbe 100755
 --- a/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
 +++ b/src/main/java/io/papermc/paper/configuration/WorldConfiguration.java
-@@ -414,7 +414,7 @@ public class WorldConfiguration extends ConfigurationPart {
+@@ -415,7 +415,7 @@ public class WorldConfiguration extends ConfigurationPart {
      public class Environment extends ConfigurationPart {
          public boolean disableThunder = false;
          public boolean disableIceAndSnow = false;
@@ -17,8 +17,8 @@ index c710819bcd422f062a10127090ecfa6b222fe4f7..7b864f32fa8953478b3c335777c9e067
 +        public boolean optimizeExplosions = true; // PaperStream - on by default
          public boolean disableExplosionKnockback = false;
          public boolean generateFlatBedrock = false;
-         public FrostedIce frostedIce;
-@@ -581,7 +581,7 @@ public class WorldConfiguration extends ConfigurationPart {
+         @Comment("Fixes MC-119599. Vanilla places snow on a chunk while generating that chunk's features, so tree parts that neighbouring chunks generate into it afterwards are left without snow, causing snowless patches of leaves with straight edges at chunk borders. Vanilla also only places snow on the top block of each column, so lower leaf layers and the ground under leaves never get snow. When enabled, snow is placed again as neighbouring chunks generate their features, including on lower leaf layers and the ground under leaves. This changes world generation and only affects newly generated chunks.")
+@@ -586,7 +586,7 @@ public class WorldConfiguration extends ConfigurationPart {
      public class Misc extends ConfigurationPart {
          public boolean updatePathfindingOnBlockUpdate = true;
          public boolean showSignClickCommandFailureMsgsToPlayer = false;

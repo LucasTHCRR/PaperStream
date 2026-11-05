@@ -6,10 +6,10 @@ Subject: [PATCH] Anti lag machines: slow down redstone clocks, limit stacked
 
 
 diff --git a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
-index fc04dc08b263a67dc1e363e87f9fce8ede3ed754..e0e01cdcfd551b4b6ba528e882cffcbacac6c311 100755
+index 286b11640f739eecf29adac7b9e98fa7b783f424..398c27736f4a6e447d31b943796a7a2bd2279139 100755
 --- a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
 +++ b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
-@@ -573,6 +573,15 @@ public class CraftEventFactory {
+@@ -577,6 +577,15 @@ public class CraftEventFactory {
          org.bukkit.block.BlockFace blockFace = org.bukkit.craftbukkit.block.CraftBlock.notchToBlockFace(clickedFace);
  
          EntityPlaceEvent event = new EntityPlaceEvent(entity.getBukkitEntity(), cplayer, clickedBlock, blockFace, CraftEquipmentSlot.getHand(hand));

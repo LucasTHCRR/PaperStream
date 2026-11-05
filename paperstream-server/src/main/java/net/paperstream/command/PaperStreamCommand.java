@@ -18,12 +18,12 @@ import org.bukkit.entity.Player;
 
 public final class PaperStreamCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "pregen", "reload", "profile", "migrate", "pair", "proxy");
+    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "lag", "pregen", "reload", "profile", "migrate", "pair", "proxy");
 
     public PaperStreamCommand(final String name) {
         super(name);
         this.description = "PaperStream status and tools";
-        this.usageMessage = "/paperstream <info|mspt|pregen|reload|profile|migrate|pair|proxy>";
+        this.usageMessage = "/paperstream <info|mspt|lag|pregen|reload|profile|migrate|pair|proxy>";
         this.setPermission("paperstream.command");
     }
 
@@ -36,6 +36,7 @@ public final class PaperStreamCommand extends Command {
         switch (sub) {
             case "info" -> this.info(sender);
             case "mspt" -> this.mspt(sender);
+            case "lag" -> this.lag(sender, args);
             case "pregen" -> this.pregen(sender, args);
             case "pair" -> this.pair(sender, args);
             case "proxy" -> this.proxy(sender, args);
@@ -233,6 +234,30 @@ public final class PaperStreamCommand extends Command {
         sender.sendMessage(String.format(Locale.ROOT, "  whole server: %.2f ms", Bukkit.getAverageTickTime()));
     }
 
+    private void lag(final CommandSender sender, final String[] args) {
+        int top = 8;
+        World only = null;
+        for (int i = 1; i < args.length; i++) {
+            final World world = Bukkit.getWorld(args[i]);
+            if (world != null) {
+                only = world;
+                continue;
+            }
+            try {
+                top = Math.max(1, Math.min(50, Integer.parseInt(args[i])));
+            } catch (final NumberFormatException ex) {
+                sender.sendMessage("Unknown world: " + args[i]);
+                return;
+            }
+        }
+        sender.sendMessage("Chunks with the most entities and ticking block entities:");
+        for (final net.minecraft.server.level.ServerLevel level : net.minecraft.server.MinecraftServer.getServer().getAllLevels()) {
+            if (only == null || level.getWorld() == only) {
+                net.paperstream.world.LagReport.build(level, top).forEach(sender::sendMessage);
+            }
+        }
+    }
+
     private void pregen(final CommandSender sender, final String[] args) {
         if (args.length >= 2 && args[1].equalsIgnoreCase("stop")) {
             sender.sendMessage(Pregenerator.stop() ? "Pregen stopped." : "No pregen running.");
@@ -302,6 +327,10 @@ public final class PaperStreamCommand extends Command {
         } else if (args.length == 2 && args[0].equalsIgnoreCase("proxy")) {
             out.add("info");
             out.add("reset");
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("lag")) {
+            for (final World world : Bukkit.getWorlds()) {
+                out.add(world.getName());
+            }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("pregen")) {
             out.add("stop");
             out.add("status");
