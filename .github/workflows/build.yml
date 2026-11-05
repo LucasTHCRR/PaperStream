@@ -35,9 +35,11 @@ jobs:
           else
             ./gradlew createPaperclipJar --console=plain
           fi
+      - name: Read Minecraft version
+        run: echo "MC_VERSION=$(grep '^mcVersion=' gradle.properties | cut -d= -f2)" >> "$GITHUB_ENV"
       - name: Upload server jar
         uses: actions/upload-artifact@v5
         with:
-          name: paperstream-${{ github.ref_name == 'main' && '26.2' || github.ref_name }}
+          name: paperstream-${{ env.MC_VERSION }}
           path: paperstream-server/build/libs/paperstream-paperclip-*.jar
           if-no-files-found: error
