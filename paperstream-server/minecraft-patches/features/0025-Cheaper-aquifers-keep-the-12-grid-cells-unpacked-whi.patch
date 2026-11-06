@@ -1,0 +1,158 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Fri, 6 Nov 2026 17:41:00 +0100
+Subject: [PATCH] Cheaper aquifers: keep the 12 grid cells unpacked while the
+ anchor stays the same
+
+
+diff --git a/net/minecraft/world/level/levelgen/Aquifer.java b/net/minecraft/world/level/levelgen/Aquifer.java
+index 22dfca7c4bc85cfd1adf7e8b0dee8c4d9f841a88..aeb4bc8f06a2eae8de3a8a3ba2e5f367d4f2d900 100755
+--- a/net/minecraft/world/level/levelgen/Aquifer.java
++++ b/net/minecraft/world/level/levelgen/Aquifer.java
+@@ -116,6 +116,15 @@ public interface Aquifer {
+         private final DensitySampler.Bound exclusion;
+         private boolean shouldScheduleFluidUpdate;
+         private final MutableDouble paperstream$barrierNoise = new MutableDouble(Double.NaN); // PaperStream
++        // PaperStream start - unpacked grid cells of the last anchor
++        private int paperstream$anchorX = Integer.MIN_VALUE;
++        private int paperstream$anchorY = Integer.MIN_VALUE;
++        private int paperstream$anchorZ = Integer.MIN_VALUE;
++        private final int[] paperstream$cellX = new int[12];
++        private final int[] paperstream$cellY = new int[12];
++        private final int[] paperstream$cellZ = new int[12];
++        private final int[] paperstream$cellIndex = new int[12];
++        // PaperStream end
+         private final int skipSamplingAboveY;
+         private final int minGridX;
+         private final int minGridY;
+@@ -233,60 +242,81 @@ public interface Aquifer {
+             int closestIndex3 = 0;
+             int closestIndex4 = 0;
+ 
+-            for (int x1 = 0; x1 <= 1; x1++) {
+-                for (int y1 = -1; y1 <= 1; y1++) {
+-                    for (int z1 = 0; z1 <= 1; z1++) {
+-                        int spacedGridX = xAnchor + x1;
+-                        int spacedGridY = yAnchor + y1;
+-                        int spacedGridZ = zAnchor + z1;
+-                        int index = this.getIndex(spacedGridX, spacedGridY, spacedGridZ);
+-                        long existingLocation = this.aquiferLocationCache[index];
+-                        long location;
+-                        if (existingLocation != Long.MAX_VALUE) {
+-                            location = existingLocation;
+-                        } else {
+-                            RandomSource random = this.positionalRandomFactory.at(spacedGridX, spacedGridY, spacedGridZ);
+-                            location = BlockPos.asLong(
+-                                fromGridX(spacedGridX, random.nextInt(10)),
+-                                fromGridY(spacedGridY, random.nextInt(9)),
+-                                fromGridZ(spacedGridZ, random.nextInt(10))
+-                            );
+-                            this.aquiferLocationCache[index] = location;
+-                        }
+-
+-                        int dx = BlockPos.getX(location) - blockX;
+-                        int dy = BlockPos.getY(location) - blockY;
+-                        int dz = BlockPos.getZ(location) - blockZ;
+-                        int newDistance = dx * dx + dy * dy + dz * dz;
+-                        if (distanceSqr1 >= newDistance) {
+-                            closestIndex4 = closestIndex3;
+-                            closestIndex3 = closestIndex2;
+-                            closestIndex2 = closestIndex1;
+-                            closestIndex1 = index;
+-                            distanceSqr4 = distanceSqr3;
+-                            distanceSqr3 = distanceSqr2;
+-                            distanceSqr2 = distanceSqr1;
+-                            distanceSqr1 = newDistance;
+-                        } else if (distanceSqr2 >= newDistance) {
+-                            closestIndex4 = closestIndex3;
+-                            closestIndex3 = closestIndex2;
+-                            closestIndex2 = index;
+-                            distanceSqr4 = distanceSqr3;
+-                            distanceSqr3 = distanceSqr2;
+-                            distanceSqr2 = newDistance;
+-                        } else if (distanceSqr3 >= newDistance) {
+-                            closestIndex4 = closestIndex3;
+-                            closestIndex3 = index;
+-                            distanceSqr4 = distanceSqr3;
+-                            distanceSqr3 = newDistance;
+-                        } else if (distanceSqr4 >= newDistance) {
+-                            closestIndex4 = index;
+-                            distanceSqr4 = newDistance;
++            // PaperStream start - the 12 grid cells only change every 16x12x16 blocks, keep them unpacked
++            final int[] cellX = this.paperstream$cellX;
++            final int[] cellY = this.paperstream$cellY;
++            final int[] cellZ = this.paperstream$cellZ;
++            final int[] cellIndex = this.paperstream$cellIndex;
++            if (xAnchor != this.paperstream$anchorX || yAnchor != this.paperstream$anchorY || zAnchor != this.paperstream$anchorZ) {
++                this.paperstream$anchorX = xAnchor;
++                this.paperstream$anchorY = yAnchor;
++                this.paperstream$anchorZ = zAnchor;
++                int cell = 0;
++                for (int x1 = 0; x1 <= 1; x1++) {
++                    for (int y1 = -1; y1 <= 1; y1++) {
++                        for (int z1 = 0; z1 <= 1; z1++) {
++                            int spacedGridX = xAnchor + x1;
++                            int spacedGridY = yAnchor + y1;
++                            int spacedGridZ = zAnchor + z1;
++                            int index = this.getIndex(spacedGridX, spacedGridY, spacedGridZ);
++                            long existingLocation = this.aquiferLocationCache[index];
++                            long location;
++                            if (existingLocation != Long.MAX_VALUE) {
++                                location = existingLocation;
++                            } else {
++                                RandomSource random = this.positionalRandomFactory.at(spacedGridX, spacedGridY, spacedGridZ);
++                                location = BlockPos.asLong(
++                                    fromGridX(spacedGridX, random.nextInt(10)),
++                                    fromGridY(spacedGridY, random.nextInt(9)),
++                                    fromGridZ(spacedGridZ, random.nextInt(10))
++                                );
++                                this.aquiferLocationCache[index] = location;
++                            }
++
++                            cellX[cell] = BlockPos.getX(location);
++                            cellY[cell] = BlockPos.getY(location);
++                            cellZ[cell] = BlockPos.getZ(location);
++                            cellIndex[cell] = index;
++                            cell++;
+                         }
+                     }
+                 }
+             }
+ 
++            for (int cell = 0; cell < 12; cell++) {
++                int index = cellIndex[cell];
++                int dx = cellX[cell] - blockX;
++                int dy = cellY[cell] - blockY;
++                int dz = cellZ[cell] - blockZ;
++                int newDistance = dx * dx + dy * dy + dz * dz;
++                if (distanceSqr1 >= newDistance) {
++                    closestIndex4 = closestIndex3;
++                    closestIndex3 = closestIndex2;
++                    closestIndex2 = closestIndex1;
++                    closestIndex1 = index;
++                    distanceSqr4 = distanceSqr3;
++                    distanceSqr3 = distanceSqr2;
++                    distanceSqr2 = distanceSqr1;
++                    distanceSqr1 = newDistance;
++                } else if (distanceSqr2 >= newDistance) {
++                    closestIndex4 = closestIndex3;
++                    closestIndex3 = closestIndex2;
++                    closestIndex2 = index;
++                    distanceSqr4 = distanceSqr3;
++                    distanceSqr3 = distanceSqr2;
++                    distanceSqr2 = newDistance;
++                } else if (distanceSqr3 >= newDistance) {
++                    closestIndex4 = closestIndex3;
++                    closestIndex3 = index;
++                    distanceSqr4 = distanceSqr3;
++                    distanceSqr3 = newDistance;
++                } else if (distanceSqr4 >= newDistance) {
++                    closestIndex4 = index;
++                    distanceSqr4 = newDistance;
++                }
++            }
++            // PaperStream end
++
+             Aquifer.FluidStatus closestStatus1 = this.getAquiferStatus(closestIndex1);
+             double similarity12 = similarity(distanceSqr1, distanceSqr2);
+             BlockState fluidState = closestStatus1.at(blockY);
