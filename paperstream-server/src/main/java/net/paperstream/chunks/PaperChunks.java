@@ -33,6 +33,7 @@ public final class PaperChunks {
         sender.sendMessage(String.format(Locale.ROOT, "PaperChunks (last %.0f s):", seconds));
         sender.sendMessage(String.format(Locale.ROOT, "  chunk tasks at tick end: %d (%.1f/s), %.1f ms total, longest %.2f ms",
             tasksInTick, tasksInTick / seconds, tickNanosTotal / 1.0E6D, maxTickNanos / 1.0E6D));
+        sender.sendMessage(String.format(Locale.ROOT, "  idle pregen: %d chunks generated, %d running", IdlePregen.completed(), IdlePregen.inFlight()));
         for (final ServerLevel level : MinecraftServer.getServer().getAllLevels()) {
             final ChunkTaskScheduler scheduler = ((ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel) level).moonrise$getChunkTaskScheduler();
             sender.sendMessage(String.format(Locale.ROOT, "  %s: %d loaded chunks, %d waiting main thread tasks",

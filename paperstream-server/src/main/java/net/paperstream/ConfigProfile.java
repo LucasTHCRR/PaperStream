@@ -50,6 +50,8 @@ public enum ConfigProfile {
         v.put("entities.tick-throttle.near-distance", 32.0D);
         v.put("entities.tick-throttle.far-distance", 56.0D);
         v.put("entities.tick-throttle.lag-mspt", 40.0D);
+        v.put("entities.ai-throttle.start-distance", 32.0D);
+        v.put("entities.ai-throttle.max-interval", 2);
         v.put("entities.pathfinding.max-per-tick", 80);
         v.put("entities.villager-brain-interval", 1);
         v.put("entities.activation-check-interval", 1);
@@ -67,6 +69,7 @@ public enum ConfigProfile {
         v.put("chunks.worker-priority.nice", 5);
         v.put("chunks.lag-generation-factor", 0.5D);
         v.put("beta.sleeping-hoppers.enabled", this == PERFORMANCE_BETA);
+        v.put("paperchunks.idle-pregen.enabled", this == PERFORMANCE_BETA);
         v.put("beta.skip-unchanged-chunk-saves.enabled", this == PERFORMANCE_BETA);
         switch (this) {
             case LOW -> {
@@ -89,6 +92,9 @@ public enum ConfigProfile {
                 v.put("entities.tick-throttle.near-distance", 24.0D);
                 v.put("entities.tick-throttle.far-distance", 40.0D);
                 v.put("entities.tick-throttle.lag-mspt", 30.0D);
+                v.put("chunks.unload.delay-seconds", this == PERFORMANCE_BETA ? 10 : 30);
+                v.put("entities.ai-throttle.start-distance", this == PERFORMANCE_BETA ? 16.0D : 24.0D);
+                v.put("entities.ai-throttle.max-interval", this == PERFORMANCE_BETA ? 4 : 3);
                 v.put("entities.pathfinding.max-per-tick", 40);
                 v.put("entities.activation-check-interval", 2);
                 v.put("world.lag-protection.mspt", 35.0D);
