@@ -75,6 +75,10 @@ All commands need `paperstream.command` (ops by default).
 
 ## Measured
 
+![Benchmark](benchmarks/2026-11-07-paper-vs-paperstream/benchmark.png)
+
+Paper 26.3 against PaperStream 1.0.0-BETA with default settings on the same machine. Setup, all numbers including where Paper is ahead, raw data and the script are in [benchmarks/2026-11-07-paper-vs-paperstream](benchmarks/2026-11-07-paper-vs-paperstream).
+
 Numbers from local test servers with bots, Minecraft 26.2.
 
 | Test | Result |

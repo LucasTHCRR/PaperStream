@@ -1,0 +1,8 @@
+name: ChunkBench
+version: 1.0.0
+main: net.paperstream.chunkbench.ChunkBench
+api-version: '1.21'
+author: LucasTHCR
+commands:
+  chunkbench:
+    usage: /chunkbench <radius> <centerX> <centerZ> [parallel]
