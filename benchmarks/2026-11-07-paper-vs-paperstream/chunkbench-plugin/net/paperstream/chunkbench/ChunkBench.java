@@ -20,6 +20,9 @@ public final class ChunkBench extends JavaPlugin {
         if (args.length > 1 && args[0].equals("jfr")) {
             return this.jfr(sender, args);
         }
+        if (args.length > 1 && args[0].equals("mem")) {
+            return this.mem(args[1]);
+        }
         if (args.length < 3) {
             return false;
         }
@@ -98,6 +101,33 @@ public final class ChunkBench extends JavaPlugin {
         } catch (final Exception e) {
             getLogger().warning("JFR failed: " + e);
         }
+        return true;
+    }
+
+    // Heap nach GC, Metaspace, Direct Memory, GC-Zeit und insgesamt angelegter Speicher
+    private boolean mem(final String tag) {
+        System.gc();
+        System.gc();
+        final java.lang.management.MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        long meta = 0, direct = 0, gcCount = 0, gcMs = 0;
+        for (final java.lang.management.MemoryPoolMXBean p : ManagementFactory.getMemoryPoolMXBeans()) {
+            if (p.getName().contains("Metaspace")) meta += p.getUsage().getUsed();
+        }
+        for (final java.lang.management.BufferPoolMXBean b : ManagementFactory.getPlatformMXBeans(java.lang.management.BufferPoolMXBean.class)) {
+            direct += b.getMemoryUsed();
+        }
+        for (final java.lang.management.GarbageCollectorMXBean g : ManagementFactory.getGarbageCollectorMXBeans()) {
+            gcCount += Math.max(0, g.getCollectionCount());
+            gcMs += Math.max(0, g.getCollectionTime());
+        }
+        final long alloc = ((com.sun.management.ThreadMXBean) ManagementFactory.getThreadMXBean()).getTotalThreadAllocatedBytes();
+        int chunks = 0, entities = 0;
+        for (final World w : Bukkit.getWorlds()) {
+            chunks += w.getLoadedChunks().length;
+            entities += w.getEntityCount();
+        }
+        getLogger().info(String.format("MEM tag=%s heapUsedMB=%.1f heapCommittedMB=%.1f metaMB=%.1f directMB=%.1f gcCount=%d gcMs=%d allocMB=%.1f chunks=%d entities=%d",
+            tag, heap.getUsed() / 1e6, heap.getCommitted() / 1e6, meta / 1e6, direct / 1e6, gcCount, gcMs, alloc / 1e6, chunks, entities));
         return true;
     }
 

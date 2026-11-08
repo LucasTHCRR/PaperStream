@@ -36,6 +36,8 @@ Tests:
 
 Raw numbers per run are in `results.jsonl`.
 
+RAM is covered separately in [RAM.md](RAM.md): no leak, the same memory as Paper once chunks are unloaded.
+
 ## What this means
 
 Where PaperStream is better:
