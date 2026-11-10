@@ -103,6 +103,7 @@ public final class MemoryGuard {
         }
         releasedThisEmptyPhase = true;
         final long before = Runtime.getRuntime().totalMemory();
+        final long rssBefore = processRss();
         // Java gibt nach dem Aufräumen erst ab, wenn mehr als MaxHeapFreeRatio (70 %) frei ist; kurz senken, danach zurück.
         final com.sun.management.HotSpotDiagnosticMXBean hotspot =
             ManagementFactory.getPlatformMXBean(com.sun.management.HotSpotDiagnosticMXBean.class);
@@ -139,7 +140,23 @@ public final class MemoryGuard {
                 ? " (the JVM keeps it because -Xms is " + (initial >> 20) + " MB)"
                 : " (the garbage collector keeps it)";
         }
-        LOGGER.info("Nobody online for {} s: cleaned up the heap, reserved memory {} MB -> {} MB{}",
-            PaperStreamConfig.memoryReleaseAfterSeconds, before >> 20, after >> 20, why);
+        final long rssAfter = processRss();
+        final String process = rssAfter < 0 ? ""
+            : ", whole process " + (rssBefore >> 20) + " MB -> " + (rssAfter >> 20) + " MB";
+        LOGGER.info("Nobody online for {} s: cleaned up the heap, heap {} MB -> {} MB{}{}",
+            PaperStreamConfig.memoryReleaseAfterSeconds, before >> 20, after >> 20, why, process);
+    }
+
+    // RSS aus /proc, enthält auch Metaspace, Threads und Netzwerkpuffer; -1 außerhalb von Linux
+    private static long processRss() {
+        try {
+            for (final String line : java.nio.file.Files.readAllLines(java.nio.file.Path.of("/proc/self/status"))) {
+                if (line.startsWith("VmRSS:")) {
+                    return Long.parseLong(line.replaceAll("[^0-9]", "")) << 10;
+                }
+            }
+        } catch (final Exception ignored) {
+        }
+        return -1;
     }
 }
