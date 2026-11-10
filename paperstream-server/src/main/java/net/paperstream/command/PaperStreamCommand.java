@@ -18,12 +18,12 @@ import org.bukkit.entity.Player;
 
 public final class PaperStreamCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "lag", "pregen", "reload", "profile", "migrate", "pair", "proxy");
+    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "lag", "chunks", "pregen", "reload", "profile", "migrate", "pair", "proxy");
 
     public PaperStreamCommand(final String name) {
         super(name);
         this.description = "PaperStream status and tools";
-        this.usageMessage = "/paperstream <info|mspt|lag|pregen|reload|profile|migrate|pair|proxy>";
+        this.usageMessage = "/paperstream <info|mspt|lag|chunks|pregen|reload|profile|migrate|pair|proxy>";
         this.setPermission("paperstream.command");
     }
 
@@ -36,6 +36,14 @@ public final class PaperStreamCommand extends Command {
         switch (sub) {
             case "info" -> this.info(sender);
             case "mspt" -> this.mspt(sender);
+            case "chunks" -> {
+                if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
+                    net.paperstream.chunks.PaperChunks.resetStats();
+                    sender.sendMessage("PaperChunks stats reset.");
+                } else {
+                    net.paperstream.chunks.PaperChunks.stats(sender);
+                }
+            }
             case "lag" -> this.lag(sender, args);
             case "pregen" -> this.pregen(sender, args);
             case "pair" -> this.pair(sender, args);

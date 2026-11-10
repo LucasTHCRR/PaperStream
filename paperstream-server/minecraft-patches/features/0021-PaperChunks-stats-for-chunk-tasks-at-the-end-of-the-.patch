@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Tue, 10 Nov 2026 04:09:28 +0100
+Subject: [PATCH] PaperChunks: stats for chunk tasks at the end of the tick
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+index 130fc0ea8326ab406910b5429acd99ea91708db2..0a2ced7c15cf4a3c764e72ec6c72387b4729a748 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+@@ -340,6 +340,12 @@ public final class ChunkTaskScheduler {
+         for (long i = 0; i < left && this.mainThreadExecutor.executeTask(); ++i);
+     }
+ 
++    // PaperStream start - PaperChunks stats
++    public long paperstream$pendingMainThreadTasks() {
++        return this.mainThreadExecutor.getTotalTasksScheduled() - this.mainThreadExecutor.getTotalTasksExecuted();
++    }
++    // PaperStream end - PaperChunks stats
++
+     public void raisePriority(final int x, final int z, final Priority priority) {
+         this.chunkHolderManager.raisePriority(x, z, priority);
+     }
+diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
+index 9333dcf5cdf4e80af48e68c88947b41d5a347fa6..8bd6d4093c3544fc23278d6a16b63b34cc3d380f 100755
+--- a/net/minecraft/server/MinecraftServer.java
++++ b/net/minecraft/server/MinecraftServer.java
+@@ -1190,7 +1190,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+             profiler.popPush("moonrise:legacy_chunk_tasks");
+             world.getChunkSource().mainThreadProcessor.executeAllRecentInternalTasks();
+             profiler.popPush("moonrise:chunk_system_tasks");
+-            ((ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel)world).moonrise$getChunkTaskScheduler().executeAllRecentlyQueuedMainThreadTasks();
++            net.paperstream.chunks.PaperChunks.runRecentChunkTasks(((ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel)world).moonrise$getChunkTaskScheduler()); // PaperStream - PaperChunks stats
+             profiler.pop();
+ 
+             profiler.pop(); // world name
