@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 15:27:01 +0100
+Subject: [PATCH] Worldgen test switch: skip decoration to compare terrain
+ block for block
+
+
+diff --git a/net/minecraft/world/level/chunk/ChunkGenerator.java b/net/minecraft/world/level/chunk/ChunkGenerator.java
+index 8babfa602cb203c6419f339b9b0579d93d88dcda..7f6f4ce3117784e2d7ab1f6d29fe4d9698a7a1cc 100755
+--- a/net/minecraft/world/level/chunk/ChunkGenerator.java
++++ b/net/minecraft/world/level/chunk/ChunkGenerator.java
+@@ -596,6 +596,9 @@ public abstract class ChunkGenerator {
+     // Paper end - fix MC-119599
+ 
+     // CraftBukkit start
++    // PaperStream - test switch: terrain without features and structures, to compare generated terrain block for block
++    private static final boolean PAPERSTREAM_SKIP_DECORATION = Boolean.getBoolean("paperstream.debug.skipDecoration");
++
+     public void applyBiomeDecoration(final WorldGenLevel level, final ChunkAccess chunk, final StructureManager structureManager) {
+         this.applyBiomeDecoration(level, chunk, structureManager, true);
+     }
+@@ -603,7 +606,7 @@ public abstract class ChunkGenerator {
+     public void applyBiomeDecoration(
+         final WorldGenLevel level, final ChunkAccess chunk, final StructureManager structureManager, final boolean addVanillaDecorations
+     ) {
+-        if (addVanillaDecorations) {
++        if (addVanillaDecorations && !PAPERSTREAM_SKIP_DECORATION) { // PaperStream - test switch
+             this.addVanillaDecorations(level, chunk, structureManager);
+         }
+ 

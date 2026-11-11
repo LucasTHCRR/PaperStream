@@ -1,0 +1,219 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCRR <330454039+LucasTHCRR@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 15:39:18 +0100
+Subject: [PATCH] Cheaper chunk generation: no per block objects, lazy
+ environment attributes, fewer block and heightmap lookups
+
+
+diff --git a/net/minecraft/server/level/WorldGenRegion.java b/net/minecraft/server/level/WorldGenRegion.java
+index 20c5ec6e8c6b297dab499aeb9294797e672b3cb2..207c516aa2be1083092dab6d27151687e94d601d 100755
+--- a/net/minecraft/server/level/WorldGenRegion.java
++++ b/net/minecraft/server/level/WorldGenRegion.java
+@@ -80,7 +80,7 @@ public class WorldGenRegion implements WorldGenLevel {
+     private final ChunkStep generatingStep;
+     private @Nullable Supplier<String> currentlyGenerating;
+     private final AtomicLong subTickCount = new AtomicLong();
+-    private final EnvironmentAttributeSystem environmentAttributes;
++    private @Nullable EnvironmentAttributeSystem environmentAttributes; // PaperStream - built on first use
+     private final BiomeResolver uncachedBiomeResolver;
+     private final int centerChunkX;
+     private final int centerChunkZ;
+@@ -136,7 +136,7 @@ public class WorldGenRegion implements WorldGenLevel {
+         this.centerChunkX = centerPos.x();
+         this.centerChunkZ = centerPos.z();
+         this.writeRadius = generatingStep.blockStateWriteRadius();
+-        this.environmentAttributes = EnvironmentAttributeSystem.builder().addStaticLayers(this).build();
++        // PaperStream - built on first use, most generation steps never read it
+     }
+ 
+     public boolean isOldChunkAround(final ChunkPos pos, final int range) {
+@@ -637,6 +637,12 @@ public class WorldGenRegion implements WorldGenLevel {
+ 
+     @Override
+     public EnvironmentAttributeReader environmentAttributes() {
+-        return this.environmentAttributes;
++        // PaperStream start - built on first use
++        EnvironmentAttributeSystem attributes = this.environmentAttributes;
++        if (attributes == null) {
++            this.environmentAttributes = attributes = EnvironmentAttributeSystem.builder().addStaticLayers(this).build();
++        }
++        return attributes;
++        // PaperStream end - built on first use
+     }
+ }
+diff --git a/net/minecraft/world/level/levelgen/Aquifer.java b/net/minecraft/world/level/levelgen/Aquifer.java
+index 7b53acc0c5f02bc1ae27852b36b6864baa1a72de..22dfca7c4bc85cfd1adf7e8b0dee8c4d9f841a88 100755
+--- a/net/minecraft/world/level/levelgen/Aquifer.java
++++ b/net/minecraft/world/level/levelgen/Aquifer.java
+@@ -115,6 +115,7 @@ public interface Aquifer {
+         private final Aquifer.FluidPicker globalFluidPicker;
+         private final DensitySampler.Bound exclusion;
+         private boolean shouldScheduleFluidUpdate;
++        private final MutableDouble paperstream$barrierNoise = new MutableDouble(Double.NaN); // PaperStream
+         private final int skipSamplingAboveY;
+         private final int minGridX;
+         private final int minGridY;
+@@ -305,7 +306,8 @@ public interface Aquifer {
+                     return actualFluidState;
+                 }
+ 
+-                MutableDouble barrierNoiseValue = new MutableDouble(Double.NaN);
++                final MutableDouble barrierNoiseValue = this.paperstream$barrierNoise; // PaperStream - reused, one aquifer is only used by one thread
++                barrierNoiseValue.setValue(Double.NaN);
+                 Aquifer.FluidStatus closestStatus2 = this.getAquiferStatus(closestIndex2);
+                 double barrier12 = similarity12 * this.calculatePressure(blockX, blockY, blockZ, barrierNoiseValue, closestStatus1, closestStatus2);
+                 if (density + barrier12 > 0.0) {
+diff --git a/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java b/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java
+index f0529d233b791e226cec469b2efebcffd02c6d58..4c54b774dab03de962f71aec6ee9c60cdc5b2ccd 100755
+--- a/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java
++++ b/net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator.java
+@@ -444,27 +444,48 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
+         DensityVolume volume = noiseChunk.volume();
+         DensitySampler.Bound finalDensity = noiseChunk.cachingSamplers().get(this.settings.value().noiseRouter().finalDensity());
+ 
++        final BlockState defaultBlock = this.settings.value().defaultBlock(); // PaperStream - looked up once per chunk
+         try (ScopedDensityBuffer densityBuffer = finalDensity.sampleVolume(volume)) {
+             for (int z = 0; z < volume.sizeZ(); z++) {
+                 int blockZ = volume.blockZ(z);
+ 
+                 for (int x = 0; x < volume.sizeX(); x++) {
+                     int blockX = volume.blockX(x);
++                    // PaperStream start - a heightmap update below its column top changes nothing, so only call it when it can
++                    int oceanFloorTop = oceanFloor.getFirstAvailable(x, z);
++                    int worldSurfaceTop = worldSurface.getFirstAvailable(x, z);
++                    int lastSectionIndex = Integer.MIN_VALUE;
++                    LevelChunkSection section = null;
++                    // PaperStream end
+ 
+                     for (int y = volume.sizeY() - 1; y >= 0; y--) {
+                         int blockY = volume.blockY(y);
+-                        LevelChunkSection section = chunk.getSection(chunk.getSectionIndex(blockY));
++                        // PaperStream start - section looked up once per 16 blocks
++                        final int sectionIndex = chunk.getSectionIndex(blockY);
++                        if (sectionIndex != lastSectionIndex) {
++                            lastSectionIndex = sectionIndex;
++                            section = chunk.getSection(sectionIndex);
++                        }
++                        // PaperStream end
+                         float density = densityBuffer.get(volume.indexUnchecked(x, y, z));
+                         BlockState state = aquifer.computeSubstance(blockX, blockY, blockZ, density);
+                         if (state == null) {
+-                            state = this.settings.value().defaultBlock();
++                            state = defaultBlock;
+                         }
+ 
+                         state = this.debugPreliminarySurfaceLevel(noiseChunk, blockX, blockY, blockZ, state);
+                         if (state != AIR) {
+                             section.setBlockState(x, SectionPos.sectionRelative(blockY), z, state, false);
+-                            oceanFloor.update(x, blockY, z, state);
+-                            worldSurface.update(x, blockY, z, state);
++                            // PaperStream start
++                            if (blockY > oceanFloorTop - 2) {
++                                oceanFloor.update(x, blockY, z, state);
++                                oceanFloorTop = oceanFloor.getFirstAvailable(x, z);
++                            }
++                            if (blockY > worldSurfaceTop - 2) {
++                                worldSurface.update(x, blockY, z, state);
++                                worldSurfaceTop = worldSurface.getFirstAvailable(x, z);
++                            }
++                            // PaperStream end
+                             if (aquifer.shouldScheduleFluidUpdate() && !state.getFluidState().isEmpty()) {
+                                 blockPos.set(blockX, blockY, blockZ);
+                                 chunk.markPosForPostProcessing(blockPos);
+diff --git a/net/minecraft/world/level/levelgen/PositionalRandomFactory.java b/net/minecraft/world/level/levelgen/PositionalRandomFactory.java
+index 0e6ce5959bc89b023de451c5fa8c12de1696897c..f94752a6c7f08ac3820deb6ac501dfad89c8a9ed 100755
+--- a/net/minecraft/world/level/levelgen/PositionalRandomFactory.java
++++ b/net/minecraft/world/level/levelgen/PositionalRandomFactory.java
+@@ -20,6 +20,12 @@ public interface PositionalRandomFactory {
+ 
+     RandomSource at(final int x, final int y, final int z);
+ 
++    // PaperStream start - first float of the random at a position, without creating the random
++    default float paperstream$firstFloatAt(final int x, final int y, final int z) {
++        return this.at(x, y, z).nextFloat();
++    }
++    // PaperStream end
++
+     @VisibleForTesting
+     void parityConfigString(StringBuilder sb);
+ }
+diff --git a/net/minecraft/world/level/levelgen/XoroshiroRandomSource.java b/net/minecraft/world/level/levelgen/XoroshiroRandomSource.java
+index fe3f1777546504cab9c9d1fcf7d5c2efe59d100a..7c22318e5dc37e0593f40809dafc878ad097d2a2 100755
+--- a/net/minecraft/world/level/levelgen/XoroshiroRandomSource.java
++++ b/net/minecraft/world/level/levelgen/XoroshiroRandomSource.java
+@@ -125,6 +125,20 @@ public class XoroshiroRandomSource implements RandomSource {
+             return new XoroshiroRandomSource(randomSeed, this.seedHi);
+         }
+ 
++        // PaperStream start - same value as at(x, y, z).nextFloat(), without the three objects
++        @Override
++        public float paperstream$firstFloatAt(final int x, final int y, final int z) {
++            long s0 = Mth.getSeed(x, y, z) ^ this.seedLo;
++            long s1 = this.seedHi;
++            if ((s0 | s1) == 0L) {
++                s0 = -7046029254386353131L;
++                s1 = 7640891576956012809L;
++            }
++            final long result = Long.rotateLeft(s0 + s1, 17) + s0;
++            return (float)(result >>> 40) * 5.9604645E-8F;
++        }
++        // PaperStream end
++
+         @Override
+         public RandomSource fromHashOf(final String name) {
+             RandomSupport.Seed128bit seed = RandomSupport.seedFromHashOf(name);
+diff --git a/net/minecraft/world/level/levelgen/material/MaterialSystem.java b/net/minecraft/world/level/levelgen/material/MaterialSystem.java
+index b339467cb268a023dd160d011bcc9ee94875fe01..3f68abbddd4434490adc1edd733c5adad0b26055 100755
+--- a/net/minecraft/world/level/levelgen/material/MaterialSystem.java
++++ b/net/minecraft/world/level/levelgen/material/MaterialSystem.java
+@@ -146,6 +146,7 @@ public class MaterialSystem {
+         context.moonrise$setDensityBufferAllocator(BUFFERS_FOR_BUILD_SURFACE.get().acquire()); // Paper - optimise chunk generation - provide a buffer allocator to significantly reduce memory allocations
+         RuleEvaluator rule = ruleSource.compile(context);
+         BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
++        BlockState[] columnStates = new BlockState[Math.max(1, maxY - minY + 3)]; // PaperStream
+ 
+         for (int x = 0; x < 16; x++) {
+             for (int z = 0; z < 16; z++) {
+@@ -166,9 +167,18 @@ public class MaterialSystem {
+                 int waterHeight = Integer.MIN_VALUE;
+                 int nextCeilingStoneY = Integer.MAX_VALUE;
+                 int endY = protoChunk.getMinY();
++                // PaperStream start - read the column once: the loop below only writes the block it has already read
++                final int columnBlocks = height - endY + 1;
++                if (columnBlocks > columnStates.length) {
++                    columnStates = new BlockState[columnBlocks];
++                }
++                for (int y = height; y >= endY; y--) {
++                    columnStates[y - endY] = column.getBlock(y);
++                }
++                // PaperStream end
+ 
+                 for (int y = height; y >= endY; y--) {
+-                    BlockState old = column.getBlock(y);
++                    BlockState old = columnStates[y - endY]; // PaperStream
+                     if (old.isAir()) {
+                         stoneAboveDepth = 0;
+                         waterHeight = Integer.MIN_VALUE;
+@@ -181,7 +191,7 @@ public class MaterialSystem {
+                             nextCeilingStoneY = DimensionType.WAY_BELOW_MIN_Y;
+ 
+                             for (int lookaheadY = y - 1; lookaheadY >= endY - 1; lookaheadY--) {
+-                                BlockState nextState = column.getBlock(lookaheadY);
++                                BlockState nextState = lookaheadY >= endY ? columnStates[lookaheadY - endY] : column.getBlock(lookaheadY); // PaperStream
+                                 if (!this.isStone(nextState)) {
+                                     nextCeilingStoneY = lookaheadY + 1;
+                                     break;
+diff --git a/net/minecraft/world/level/levelgen/material/condition/VerticalGradientCondition.java b/net/minecraft/world/level/levelgen/material/condition/VerticalGradientCondition.java
+index fe68d13f80bf9358e30939ea257a0bbe84dc42df..ee404300490e2fc3ab8283b80010759e81dab3a7 100755
+--- a/net/minecraft/world/level/levelgen/material/condition/VerticalGradientCondition.java
++++ b/net/minecraft/world/level/levelgen/material/condition/VerticalGradientCondition.java
+@@ -42,8 +42,7 @@ public record VerticalGradientCondition(Identifier randomName, VerticalAnchor tr
+                 }
+ 
+                 double probability = Mth.map(blockY, trueAtAndBelow, falseAtAndAbove, 1.0, 0.0);
+-                RandomSource random = randomFactory.at(this.context.blockX(), blockY, this.context.blockZ());
+-                return random.nextFloat() < probability;
++                return randomFactory.paperstream$firstFloatAt(this.context.blockX(), blockY, this.context.blockZ()) < probability; // PaperStream - no objects per block
+             }
+         };
+     }

@@ -56,10 +56,10 @@ index c2d18458ce81c2d1523b3cf932e3c133c75b6f3f..776fc1e7dd4135abee2f90d5b0ef728d
      }
  
 diff --git a/net/minecraft/world/level/block/entity/BlockEntity.java b/net/minecraft/world/level/block/entity/BlockEntity.java
-index ddda24a55201de2136fc6dd2cb863d609925d0ca..acd0ea0903dea3f6bb1d32eb64280e1bee9d1dde 100755
+index 37f5c96a0b00f56b06b04d4fa8f5562ee6055865..5f1304b8a989283b93154c5337d0ab027fadae14 100755
 --- a/net/minecraft/world/level/block/entity/BlockEntity.java
 +++ b/net/minecraft/world/level/block/entity/BlockEntity.java
-@@ -217,6 +217,7 @@ public abstract class BlockEntity implements DebugValueSource, TypedInstance<Blo
+@@ -218,6 +218,7 @@ public abstract class BlockEntity implements DebugValueSource, TypedInstance<Blo
  
      protected static void setChanged(final Level level, final BlockPos worldPosition, final BlockState blockState) {
          level.blockEntityChanged(worldPosition);
