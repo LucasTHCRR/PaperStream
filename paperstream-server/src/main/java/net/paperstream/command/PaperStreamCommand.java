@@ -18,12 +18,12 @@ import org.bukkit.entity.Player;
 
 public final class PaperStreamCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "lag", "pregen", "reload", "profile", "migrate", "pair", "proxy");
+    private static final List<String> SUBCOMMANDS = List.of("info", "mspt", "lag", "report", "pregen", "reload", "profile", "migrate", "pair", "proxy");
 
     public PaperStreamCommand(final String name) {
         super(name);
         this.description = "PaperStream status and tools";
-        this.usageMessage = "/paperstream <info|mspt|lag|pregen|reload|profile|migrate|pair|proxy>";
+        this.usageMessage = "/paperstream <info|mspt|lag|report|pregen|reload|profile|migrate|pair|proxy>";
         this.setPermission("paperstream.command");
     }
 
@@ -37,6 +37,14 @@ public final class PaperStreamCommand extends Command {
             case "info" -> this.info(sender);
             case "mspt" -> this.mspt(sender);
             case "lag" -> this.lag(sender, args);
+            case "report" -> {
+                final net.minecraft.server.MinecraftServer server = net.minecraft.server.MinecraftServer.getServer();
+                if (args.length >= 2 && args[1].equalsIgnoreCase("send")) {
+                    net.paperstream.report.ReportHint.send(server, sender);
+                } else {
+                    net.paperstream.report.ReportHint.preview(server, sender);
+                }
+            }
             case "pregen" -> this.pregen(sender, args);
             case "pair" -> this.pair(sender, args);
             case "proxy" -> this.proxy(sender, args);
@@ -318,6 +326,8 @@ public final class PaperStreamCommand extends Command {
                     out.add(p.id);
                 }
             }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("report")) {
+            out.add("send");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
             out.add("apply");
         } else if (args.length == 3 && args[0].equalsIgnoreCase("migrate") && args[1].equalsIgnoreCase("apply")) {
