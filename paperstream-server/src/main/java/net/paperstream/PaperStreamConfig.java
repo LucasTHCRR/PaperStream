@@ -46,6 +46,10 @@ public final class PaperStreamConfig {
     public static double entityThrottleNear = 32.0D;
     public static double entityThrottleFar = 56.0D;
     public static double entityThrottleLagMspt = 40.0D;
+    // report
+    public static boolean reportHint = true;
+    public static double reportHintMspt = 50.0D;
+    public static String reportUrl = "https://reports.paperstream.dev";
     // paperchunks.idle-pregen
     public static boolean idlePregen = false;
     public static int idlePregenRadius = 8;
@@ -406,6 +410,16 @@ public final class PaperStreamConfig {
             "Upper limit of chunks started per second."));
         idlePregenMaxMspt = number(yaml, "paperchunks.idle-pregen.max-mspt", idlePregenMaxMspt,
             "Pauses in a world that averages more MSPT than this.");
+
+        reportHint = bool(yaml, "report.console-hint", reportHint,
+            "When a world lags for 30 seconds or a tick takes over 2 seconds, the console says that a report can be sent with /paperstream report send. Nothing is ever sent automatically, and a report holds server data only: no world names, player names, addresses or UUIDs.");
+        reportHintMspt = number(yaml, "report.hint-mspt", reportHintMspt,
+            "MSPT a world has to average for 30 seconds before the console hint appears.");
+        reportUrl = string(yaml, "report.url", reportUrl,
+            "Where /paperstream report send uploads to.");
+        while (reportUrl.endsWith("/")) {
+            reportUrl = reportUrl.substring(0, reportUrl.length() - 1);
+        }
 
         directionalBias = Math.max(0.0D, Math.min(0.95D, directionalBias));
         prefetchLookahead = Math.max(1, Math.min(32, prefetchLookahead));
