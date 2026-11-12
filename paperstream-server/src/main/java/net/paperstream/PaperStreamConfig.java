@@ -46,6 +46,21 @@ public final class PaperStreamConfig {
     public static double entityThrottleNear = 32.0D;
     public static double entityThrottleFar = 56.0D;
     public static double entityThrottleLagMspt = 40.0D;
+    // report
+    public static boolean reportHint = true;
+    public static double reportHintMspt = 50.0D;
+    public static String reportUrl = "https://reports.paperstream.dev";
+    // paperchunks.idle-pregen
+    public static boolean idlePregen = false;
+    public static int idlePregenRadius = 8;
+    public static int idlePregenAhead = 16;
+    public static int idlePregenMaxConcurrent = 4;
+    public static int idlePregenMaxPerSecond = 40;
+    public static double idlePregenMaxMspt = 25.0D;
+    // entities.ai-throttle
+    public static boolean aiThrottle = true;
+    public static double aiThrottleStart = 32.0D;
+    public static int aiThrottleMaxInterval = 2;
 
     // chunks.fast-travel
     public static boolean fastTravelSim = false;
@@ -202,7 +217,7 @@ public final class PaperStreamConfig {
         yaml.setComments("profile-applied", java.util.List.of("Written by PaperStream, do not change."));
 
         regionCompression = string(yaml, "chunks.region-compression", regionCompression,
-            "Compression for newly written chunks: lz4, deflate, none or keep (use server.properties). Old chunks stay readable.");
+            "Compression for newly written chunks: lz4, lz4hc, deflate, none or keep (use server.properties). lz4hc makes the world about 14% smaller than lz4 but generating new chunks is about 10% slower. Old chunks stay readable.");
 
         directionalLoading = bool(yaml, "chunks.directional-loading.enabled", directionalLoading,
             "Load and send chunks in front of the player before the ones behind.");
@@ -375,6 +390,37 @@ public final class PaperStreamConfig {
             "Beyond this many blocks idle mobs tick every 4th tick.");
         entityThrottleLagMspt = number(yaml, "entities.tick-throttle.lag-mspt", entityThrottleLagMspt,
             "If a world averages more MSPT than this, throttled mobs in that world tick half as often again.");
+
+        aiThrottle = bool(yaml, "entities.ai-throttle.enabled", aiThrottle,
+            "Mobs far from every player think less often: villagers run their behaviors and fighting mobs recalculate their path only every few ticks. Movement, physics, attack timing, sensors and memories stay at full speed, mobs chasing a player are never slowed.");
+        aiThrottleStart = number(yaml, "entities.ai-throttle.start-distance", aiThrottleStart,
+            "Closer than this many blocks to a player nothing is throttled.");
+        aiThrottleMaxInterval = integer(yaml, "entities.ai-throttle.max-interval", aiThrottleMaxInterval,
+            "Beyond start-distance mobs think every 2nd tick, every 16 blocks further one tick less often, up to this value. 1 = off.");
+        aiThrottleMaxInterval = Math.max(1, aiThrottleMaxInterval);
+
+        idlePregen = bool(yaml, "paperchunks.idle-pregen.enabled", idlePregen,
+            "While the server has spare time it generates the land around players and in the direction they look, so it is ready when they get there. Runs at the lowest priority on the chunk workers, nothing is loaded or ticked.");
+        idlePregenRadius = integer(yaml, "paperchunks.idle-pregen.radius", idlePregenRadius,
+            "Chunks beyond the view distance to generate all around a player.");
+        idlePregenAhead = integer(yaml, "paperchunks.idle-pregen.ahead", idlePregenAhead,
+            "Chunks beyond the view distance to generate in the direction a player looks.");
+        idlePregenMaxConcurrent = Math.max(1, integer(yaml, "paperchunks.idle-pregen.max-concurrent", idlePregenMaxConcurrent,
+            "Chunks generated at the same time."));
+        idlePregenMaxPerSecond = Math.max(1, integer(yaml, "paperchunks.idle-pregen.max-per-second", idlePregenMaxPerSecond,
+            "Upper limit of chunks started per second."));
+        idlePregenMaxMspt = number(yaml, "paperchunks.idle-pregen.max-mspt", idlePregenMaxMspt,
+            "Pauses in a world that averages more MSPT than this.");
+
+        reportHint = bool(yaml, "report.console-hint", reportHint,
+            "When a world lags for 30 seconds or a tick takes over 2 seconds, the console says that a report can be sent with /paperstream report send. Nothing is ever sent automatically, and a report holds server data only: no world names, player names, addresses or UUIDs.");
+        reportHintMspt = number(yaml, "report.hint-mspt", reportHintMspt,
+            "MSPT a world has to average for 30 seconds before the console hint appears.");
+        reportUrl = string(yaml, "report.url", reportUrl,
+            "Where /paperstream report send uploads to.");
+        while (reportUrl.endsWith("/")) {
+            reportUrl = reportUrl.substring(0, reportUrl.length() - 1);
+        }
 
         directionalBias = Math.max(0.0D, Math.min(0.95D, directionalBias));
         prefetchLookahead = Math.max(1, Math.min(32, prefetchLookahead));

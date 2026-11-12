@@ -59,6 +59,8 @@ public final class PaperStream {
             }
         });
         server.addTickable(Pregenerator::tick);
+        server.addTickable(() -> net.paperstream.chunks.IdlePregen.tick(server));
+        server.addTickable(() -> net.paperstream.report.ReportHint.tick(server));
         server.addTickable(() -> net.paperstream.world.MemoryGuard.tick(server));
         net.paperstream.link.ProxyLink.init(server);
         server.addTickable(net.paperstream.link.ProxyLink::tick);
