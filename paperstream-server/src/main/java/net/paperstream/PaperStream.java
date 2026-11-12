@@ -59,6 +59,8 @@ public final class PaperStream {
             }
         });
         server.addTickable(Pregenerator::tick);
+        server.addTickable(() -> net.paperstream.chunks.IdlePregen.tick(server));
+        server.addTickable(() -> net.paperstream.report.ReportHint.tick(server));
         // workers can start any time, look for new ones once a minute
         server.addTickable(() -> {
             if (MinecraftServer.currentTick % 1200 == 40) {

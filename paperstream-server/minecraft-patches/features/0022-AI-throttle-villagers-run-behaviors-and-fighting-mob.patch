@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Fri, 6 Nov 2026 15:12:00 +0100
+Subject: [PATCH] AI throttle: villagers run behaviors and fighting mobs
+ recalculate paths less often far from players
+
+
+diff --git a/net/minecraft/world/entity/Mob.java b/net/minecraft/world/entity/Mob.java
+index 1600743282530b540a77e790f6d04de0670f10de..71ec02c68e3e98fb19143894eedf695a42853713 100755
+--- a/net/minecraft/world/entity/Mob.java
++++ b/net/minecraft/world/entity/Mob.java
+@@ -104,6 +104,8 @@ public abstract class Mob extends LivingEntity implements EquipmentUser, Leashab
+     // PaperStream start - entity tick throttle
+     public int psThrottleInterval = 1;
+     public int psThrottleRecheckTick;
++    public int psAiInterval = 1;
++    public int psAiRecheckTick;
+     // PaperStream end - entity tick throttle
+     private static final EntityDataAccessor<Byte> DATA_MOB_FLAGS_ID = SynchedEntityData.defineId(Mob.class, EntityDataSerializers.BYTE);
+     private static final int MOB_FLAG_NO_AI = 1;
+diff --git a/net/minecraft/world/entity/ai/Brain.java b/net/minecraft/world/entity/ai/Brain.java
+index a8b076d95ca7bbdbdb6f32bd464cf77d9894dcba..01002c5c19e414737bca8d307ddc031428b9eed4 100755
+--- a/net/minecraft/world/entity/ai/Brain.java
++++ b/net/minecraft/world/entity/ai/Brain.java
+@@ -411,6 +411,13 @@ public class Brain<E extends LivingEntity> {
+         this.tickEachRunningBehavior(level, entity);
+     }
+ 
++    // PaperStream start - ai throttle
++    public void psTickWithoutBehaviors(final ServerLevel level, final E body) {
++        this.forgetOutdatedMemories();
++        this.tickSensors(level, body);
++    }
++    // PaperStream end - ai throttle
++
+     private void tickSensors(ServerLevel level, E brainHolder) {
+         for (Sensor<? super E> sensor : this.sensors.values()) {
+             sensor.tick(level, brainHolder);
+diff --git a/net/minecraft/world/entity/ai/goal/MeleeAttackGoal.java b/net/minecraft/world/entity/ai/goal/MeleeAttackGoal.java
+index 41b7256c0519a3345b3dec033e5cc24efdfd7cbc..099b618b7069157ab92f5dff1641e3a61a2503ef 100755
+--- a/net/minecraft/world/entity/ai/goal/MeleeAttackGoal.java
++++ b/net/minecraft/world/entity/ai/goal/MeleeAttackGoal.java
+@@ -115,6 +115,7 @@ public class MeleeAttackGoal extends Goal {
+                 }
+ 
+                 this.ticksUntilNextPathRecalculation = this.adjustedTickDelay(this.ticksUntilNextPathRecalculation);
++                this.ticksUntilNextPathRecalculation = net.paperstream.entity.AiThrottle.pathDelay(this.mob, target, this.ticksUntilNextPathRecalculation); // PaperStream - ai throttle
+             }
+ 
+             this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
+diff --git a/net/minecraft/world/entity/npc/villager/Villager.java b/net/minecraft/world/entity/npc/villager/Villager.java
+index d1cb36789ad807233e0a93164e9423b9bcde069f..92af943fdfd078e65b57374e180fd1eb12613dcf 100755
+--- a/net/minecraft/world/entity/npc/villager/Villager.java
++++ b/net/minecraft/world/entity/npc/villager/Villager.java
+@@ -303,7 +303,7 @@ public class Villager extends AbstractVillager implements ReputationEventHandler
+         // Paper end - EAR 2
+         ProfilerFiller profilerFiller = Profiler.get();
+         profilerFiller.push("villagerBrain");
+-        if (!inactive && net.paperstream.entity.VillagerThrottle.shouldTickBrain(this)) this.getBrain().tick(level, this); // Paper - EAR 2 // PaperStream - villager brain throttle
++        if (!inactive && net.paperstream.entity.VillagerThrottle.shouldTickBrain(this)) { if (net.paperstream.entity.AiThrottle.skipBehaviors(this)) this.getBrain().psTickWithoutBehaviors(level, this); else this.getBrain().tick(level, this); } // Paper - EAR 2 // PaperStream - villager brain throttle
+         profilerFiller.pop();
+         if (this.assignProfessionWhenSpawned) {
+             this.assignProfessionWhenSpawned = false;
