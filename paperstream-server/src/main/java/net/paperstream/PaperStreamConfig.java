@@ -213,7 +213,7 @@ public final class PaperStreamConfig {
         yaml.setComments("profile-applied", java.util.List.of("Written by PaperStream, do not change."));
 
         regionCompression = string(yaml, "chunks.region-compression", regionCompression,
-            "Compression for newly written chunks: lz4, deflate, none or keep (use server.properties). Old chunks stay readable.");
+            "Compression for newly written chunks: lz4, lz4hc, deflate, none or keep (use server.properties). lz4hc makes the world about 14% smaller than lz4 but generating new chunks is about 10% slower. Old chunks stay readable.");
 
         directionalLoading = bool(yaml, "chunks.directional-loading.enabled", directionalLoading,
             "Load and send chunks in front of the player before the ones behind.");

@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: LucasTHCR <lucas@empireblocks.de>
+Date: Thu, 12 Nov 2026 17:10:00 +0100
+Subject: [PATCH] Region compression lz4hc: same format as lz4, smaller files,
+ slower to write
+
+
+diff --git a/net/minecraft/world/level/chunk/storage/RegionFileVersion.java b/net/minecraft/world/level/chunk/storage/RegionFileVersion.java
+index 2dac66514278317deb2d6bf222888a885c0479b8..3d5cd55972714ae4f851bca74ffb4b8fe6ff3cb9 100755
+--- a/net/minecraft/world/level/chunk/storage/RegionFileVersion.java
++++ b/net/minecraft/world/level/chunk/storage/RegionFileVersion.java
+@@ -37,6 +37,19 @@ public class RegionFileVersion {
+             4, "lz4", in -> new FastBufferedInputStream(new LZ4BlockInputStream(in)), out -> new BufferedOutputStream(new LZ4BlockOutputStream(out))
+         )
+     );
++    // PaperStream start - lz4hc: same format and id as lz4, smaller files, slower to write
++    public static final RegionFileVersion VERSION_LZ4_HC = new RegionFileVersion(
++        4,
++        "lz4hc",
++        in -> new FastBufferedInputStream(new LZ4BlockInputStream(in)),
++        out -> new BufferedOutputStream(new LZ4BlockOutputStream(out, 1 << 16, net.jpountz.lz4.LZ4Factory.fastestInstance().highCompressor()))
++    );
++
++    static {
++        // nur per Name wählbar, gelesen wird weiter über die normale lz4-Version
++        VERSIONS_BY_NAME.put("lz4hc", VERSION_LZ4_HC);
++    }
++    // PaperStream end
+     public static final RegionFileVersion VERSION_CUSTOM = register(new RegionFileVersion(127, null, in -> {
+         throw new UnsupportedOperationException();
+     }, out -> {
