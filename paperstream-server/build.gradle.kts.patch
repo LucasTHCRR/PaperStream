@@ -1,10 +1,9 @@
 --- a/paper-server/build.gradle.kts
 +++ b/paper-server/build.gradle.kts
-@@ -21,6 +21,17 @@
- paperweight {
+@@ -22,6 +_,17 @@
      minecraftVersion = providers.gradleProperty("mcVersion")
      gitFilePatches = false
-+
+ 
 +    val fork = forks.register("paperstream") {
 +        upstream.patchDir("paperServer") {
 +            upstreamPath = "paper-server"
@@ -15,10 +14,11 @@
 +    }
 +
 +    activeFork = fork
- 
++
      updatingMinecraft {
          // oldPaperCommit = "711c5de2b05df39b72c44ff54e9f9381f8d153cb"
-@@ -86,7 +97,20 @@
+     }
+@@ -86,7 +_,20 @@
      }
  }
  
@@ -40,7 +40,7 @@
  configurations.named(log4jPlugins.compileClasspathConfigurationName) {
      extendsFrom(configurations.compileClasspath.get())
  }
-@@ -109,7 +133,7 @@
+@@ -109,10 +_,11 @@
  }
  
  dependencies {
@@ -49,7 +49,11 @@
      implementation("ca.spottedleaf:concurrentutil:0.0.10")
      implementation("org.jline:jline-terminal-ffm:3.27.1") // use ffm on java 22+
      implementation("org.jline:jline-terminal-jni:3.27.1") // fall back to jni on java 21
-@@ -171,14 +195,14 @@
++    implementation("de.empireblocks:updater-api:1.8.0") { isTransitive = false }
+     implementation("net.minecrell:terminalconsoleappender:1.3.0")
+     implementation("net.kyori:adventure-text-serializer-ansi")
+ 
+@@ -171,14 +_,15 @@
          val gitBranch = git.exec(providers, "rev-parse", "--abbrev-ref", "HEAD").get().trim()
          attributes(
              "Main-Class" to "org.bukkit.craftbukkit.Main",
@@ -64,12 +68,13 @@
 -            "Brand-Id" to "papermc:paper",
 -            "Brand-Name" to "Paper",
 +            "Specification-Vendor" to "LucasTHCR",
++            "PaperStream-Version" to (System.getenv("PAPERSTREAM_VERSION") ?: "dev"),
 +            "Brand-Id" to "paperstream:paperstream",
 +            "Brand-Name" to "PaperStream",
              "Build-Number" to (build ?: ""),
              "Build-Time" to buildTime.toString(),
              "Git-Branch" to gitBranch,
-@@ -237,7 +261,7 @@
+@@ -237,7 +_,7 @@
      jvmArgumentProviders.add(provider)
  }
  
