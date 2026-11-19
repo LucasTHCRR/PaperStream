@@ -69,6 +69,7 @@ public final class PaperStream {
         });
         net.paperstream.link.ProxyLink.init(server);
         server.addTickable(net.paperstream.link.ProxyLink::tick);
+        net.paperstream.update.UpdateCheck.start();
         server.addTickable(() -> net.paperstream.world.MemoryGuard.tick(server));
     }
 
