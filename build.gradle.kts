@@ -65,6 +65,9 @@ subprojects {
     repositories {
         mavenCentral()
         maven(paperMavenPublicUrl)
+        maven("https://codeberg.org/api/packages/LucasTHCR/maven") {
+            content { includeGroup("de.empireblocks") }
+        }
     }
 
     extensions.configure<PublishingExtension> {

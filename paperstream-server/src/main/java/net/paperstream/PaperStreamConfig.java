@@ -50,6 +50,9 @@ public final class PaperStreamConfig {
     public static boolean reportHint = true;
     public static double reportHintMspt = 50.0D;
     public static String reportUrl = "https://reports.paperstream.dev";
+    // updates
+    public static boolean updateCheck = true;
+    public static boolean updateAutoDownload = false;
     // paperchunks.idle-pregen
     public static boolean idlePregen = false;
     public static int idlePregenRadius = 8;
@@ -421,6 +424,11 @@ public final class PaperStreamConfig {
         while (reportUrl.endsWith("/")) {
             reportUrl = reportUrl.substring(0, reportUrl.length() - 1);
         }
+
+        updateCheck = bool(yaml, "updates.check", updateCheck,
+            "Looks for a new PaperStream release for your Minecraft version at start and every 6 hours and says so in the console. Only the version number is fetched from GitHub, nothing about your server is sent.");
+        updateAutoDownload = bool(yaml, "updates.auto-download", updateAutoDownload,
+            "Downloads a new release into the paperstream-update folder and puts it in place of the server jar when the server stops. The server is never restarted for it. Needs updates.check.");
 
         directionalBias = Math.max(0.0D, Math.min(0.95D, directionalBias));
         prefetchLookahead = Math.max(1, Math.min(32, prefetchLookahead));

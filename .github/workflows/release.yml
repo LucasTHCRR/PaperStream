@@ -46,6 +46,8 @@ jobs:
       - name: Apply patches
         run: ./gradlew applyAllPatches --console=plain
       - name: Build server jar
+        env:
+          PAPERSTREAM_VERSION: ${{ github.ref_name }}
         run: |
           if grep -q '^mcVersion=1\.21' gradle.properties; then
             ./gradlew createMojmapPaperclipJar --console=plain
